@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS hls_renditions CASCADE;
+DROP TABLE IF EXISTS refresh_tokens CASCADE;

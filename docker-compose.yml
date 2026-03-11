@@ -1,0 +1,182 @@
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: streamforge-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      INTERNAL_API_URL: http://api:8080
+      PUBLIC_API_URL: http://localhost:8080
+    networks:
+      - streamforge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: streamforge-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: streamforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - streamforge
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:alpine
+    container_name: streamforge-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - streamforge
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: streamforge-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - streamforge
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongodb/mongodb-community-server:8.0-ubi8
+    container_name: streamforge-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: streamforge
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - streamforge
+    healthcheck:
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "quit(db.runCommand({ ping: 1 }).ok ? 0 : 1)" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  api:
+    container_name: streamforge-api
+    build:
+      context: ./backend/api
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: streamforge
+      POSTGRES_SSL_MODE: disable
+      REDIS_URL: "redis://redis:6379"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_ACCOUNT_KEY: ${AZURE_STORAGE_ACCOUNT_KEY} # ← from .env
+      AZURE_STORAGE_ENDPOINT: https://${AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net
+      AZURE_BLOB_RAW_CONTAINER: raw-videos
+      AZURE_BLOB_HLS_CONTAINER: hls-videos
+      COSMOS_CONNECTION_STRING: "mongodb://root:password@mongodb:27017/streamforge?authSource=admin"
+      COSMOS_DATABASE: streamforge
+      JWT_SECRET: ${JWT_SECRET} # ← from .env
+      JWT_EXPIRY_HOURS: 24
+      REFRESH_TOKEN_EXPIRY_DAYS: 7
+      CORS_ALLOWED_ORIGIN: "http://localhost:3000"
+    networks:
+      - streamforge
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  transcoder:
+    container_name: streamforge-transcoder
+    build:
+      context: ./backend/transcoder
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "9090:9090"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: streamforge
+      POSTGRES_SSL_MODE: disable
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_QUEUE: transcoder.jobs
+      RABBITMQ_DEAD_LETTER_QUEUE: transcoder.jobs.dlq
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_ACCOUNT_KEY: ${AZURE_STORAGE_ACCOUNT_KEY} # ← same key as API
+      AZURE_STORAGE_ENDPOINT: https://${AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net
+      AZURE_BLOB_RAW_CONTAINER: raw-videos
+      AZURE_BLOB_HLS_CONTAINER: hls-videos
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      TEMP_DIR: /tmp
+    networks:
+      - streamforge
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongodb_data:
+
+networks:
+  streamforge:
+    driver: bridge

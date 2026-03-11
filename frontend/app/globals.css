@@ -1,0 +1,1088 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Backgrounds */
+  --bg: #080808;
+  --bg-card: rgba(11, 11, 11, 0.92);
+  --bg-elevated: rgba(18, 18, 18, 0.95);
+  --bg-input: rgba(255, 255, 255, 0.03);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+
+  /* Accent — amber/gold */
+  --accent: #F5C842;
+  --accent-hover: #FFD84A;
+  --accent-muted: rgba(245, 200, 66, 0.15);
+  --accent-glow: rgba(245, 200, 66, 0.25);
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --border-focus: rgba(245, 200, 66, 0.45);
+
+  /* Text */
+  --text: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-faint: rgba(255, 255, 255, 0.22);
+
+  /* Status */
+  --error: #f87171;
+  --error-bg: rgba(239, 68, 68, 0.08);
+  --error-border: rgba(239, 68, 68, 0.18);
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.08);
+  --success-border: rgba(74, 222, 128, 0.2);
+  --warning: #fbbf24;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+
+  /* Shadows */
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 32px 64px rgba(0, 0, 0, 0.5);
+  --shadow-btn: 0 4px 20px rgba(245, 200, 66, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  --shadow-glow: 0 0 40px rgba(245, 200, 66, 0.12);
+
+  /* Nav */
+  --nav-h: 64px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════════ */
+@layer base {
+
+  /* Prevent SVGs from overflowing their container when no explicit size is set */
+  svg {
+    display: block;
+    overflow: hidden;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  /* Use .serif for display headings */
+  .serif {
+    font-family: 'DM Serif Display', serif;
+  }
+
+  /* Reset link default amber — pages override as needed */
+  a {
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  ::selection {
+    background: rgba(245, 200, 66, 0.18);
+    color: #fff;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 200, 66, 0.22);
+}
+
+/* ─── Navbar responsive helpers ─── */
+@media (max-width: 767px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: flex !important;
+  }
+
+  /* Upload form collapses to single column on mobile */
+  .upload-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+
+.page {
+  min-height: 100vh;
+  padding-top: var(--nav-h);
+}
+
+.container-app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Subtle dot-grid background */
+.bg-grid {
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Ambient gradient layer — add to fixed bg divs */
+.bg-ambient {
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(245, 200, 66, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 100%, rgba(66, 180, 245, 0.03) 0%, transparent 60%);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARD
+═══════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Amber top-edge shimmer */
+.card-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 200, 66, 0.5) 50%, transparent);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  pointer-events: none;
+}
+
+/* Hover lift card */
+.card-hover {
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(245, 200, 66, 0.06);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FORM ELEMENTS
+═══════════════════════════════════════════════════════════════ */
+.field-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+
+.field-input {
+  width: 100%;
+  padding: 11px 15px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  -webkit-appearance: none;
+}
+
+.field-input::placeholder {
+  color: var(--text-faint);
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(245, 200, 66, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.field-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+textarea.field-input {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Select */
+select.field-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+select.field-input option {
+  background: #141414;
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, transform 0.14s, box-shadow 0.18s, opacity 0.15s, border-color 0.18s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-sm {
+  padding: 7px 13px;
+  font-size: 0.8rem;
+}
+
+.btn-lg {
+  padding: 13px 24px;
+  font-size: 0.925rem;
+}
+
+/* Primary — amber */
+.btn-primary {
+  background: var(--accent);
+  color: #0b0800;
+  box-shadow: var(--shadow-btn);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(245, 200, 66, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(245, 200, 66, 0.18);
+}
+
+/* Ghost */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* Danger */
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Icon-only square */
+.btn-icon {
+  padding: 8px;
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BADGES & TAGS
+═══════════════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.badge-accent {
+  background: var(--accent-muted);
+  color: var(--accent);
+  border: 1px solid rgba(245, 200, 66, 0.2);
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.badge-error {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+.badge-muted {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ALERTS
+═══════════════════════════════════════════════════════════════ */
+.alert {
+  border-radius: var(--r-md);
+  padding: 11px 15px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.alert-error {
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: var(--error);
+}
+
+.alert-success {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+}
+
+.alert-warning {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DIVIDERS
+═══════════════════════════════════════════════════════════════ */
+.divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.divider-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════════════════════ */
+.nav-link {
+  position: relative;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.18s, background 0.18s;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.nav-link.active {
+  color: var(--text);
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 99px;
+  box-shadow: 0 0 8px rgba(245, 200, 66, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIDEO GRID  (YouTube-style responsive)
+═══════════════════════════════════════════════════════════════ */
+
+/*
+  Grid: mirrors YouTube desktop —
+    ≥1280px  → 4 columns
+    ≥1024px  → 3 columns
+    ≥640px   → 2 columns
+    <640px   → 1 column
+  min column width 280px so cards never shrink below YouTube's card size.
+*/
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px 12px;
+}
+
+@media (min-width: 640px) {
+  .video-grid {
+    gap: 20px 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .video-grid {
+    gap: 24px 16px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .video-grid {
+    gap: 28px 18px;
+  }
+}
+
+/* ── Card shell — NO border, NO background, YouTube-flat ── */
+.video-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  /* allow flex/grid shrink */
+}
+
+/* ── Thumbnail wrapper ── */
+.video-thumb {
+  aspect-ratio: 16 / 9;
+  background:
+    linear-gradient(135deg, rgba(245, 200, 66, 0.03) 0%, transparent 60%),
+    rgba(22, 22, 22, 1);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  transition: border-radius 0.18s;
+}
+
+/* On hover slightly round thumbnail — YouTube does ~6px to 12px toggle */
+.video-card:hover .video-thumb {
+  border-radius: 6px;
+}
+
+.video-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+  display: block;
+}
+
+.video-card:hover .video-thumb img {
+  transform: scale(1.03);
+}
+
+/* Duration badge — bottom-right, dark pill like YouTube */
+.video-duration {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Status dot — top-left */
+.video-status-dot {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+/* ── Meta row below thumbnail — YouTube layout ── */
+/*
+  [avatar]  [title + meta]  [kebab]
+  Avatar is 36px circle, title is 2-line clamp, meta is muted small text.
+*/
+.video-meta {
+  display: flex;
+  gap: 12px;
+  padding: 10px 2px 4px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* Channel avatar circle */
+.video-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(245, 200, 66, 0.12);
+  border: 1px solid rgba(245, 200, 66, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Text block next to avatar */
+.video-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Title — 2-line clamp like YouTube, but hard-truncate very long unbreakable strings */
+.video-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.15s;
+  word-break: break-all;
+  /* handles UUIDs / long filenames */
+  overflow-wrap: anywhere;
+}
+
+.video-card:hover .video-title {
+  color: #fff;
+}
+
+/* Sub-line: channel name, dot, date, dot, status */
+.video-sub {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.video-sub-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+/* Three-dot action button — far right */
+.video-action {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 4px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.0);
+  /* hidden until hover */
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-card:hover .video-action {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.video-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.video-action svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETON LOADER
+═══════════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.04) 75%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS / UPLOAD
+═══════════════════════════════════════════════════════════════ */
+.progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 99px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(245, 200, 66, 0.4);
+}
+
+/* Drop zone */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r-xl);
+  background: var(--bg-input);
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone.drag-over {
+  border-color: rgba(245, 200, 66, 0.4);
+  background: rgba(245, 200, 66, 0.03);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════════════ */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.4);
+  }
+
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 6px rgba(245, 200, 66, 0);
+  }
+}
+
+@keyframes orb-a {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  40% {
+    transform: translate(24px, -32px) scale(1.04);
+  }
+
+  70% {
+    transform: translate(-16px, 16px) scale(0.97);
+  }
+}
+
+@keyframes orb-b {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  35% {
+    transform: translate(-32px, 24px) scale(1.06);
+  }
+
+  65% {
+    transform: translate(20px, -12px) scale(0.96);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-spin-ring {
+  animation: spin-ring 7s linear infinite;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2.2s ease-in-out infinite;
+}
+
+.animate-orb-a {
+  animation: orb-a 13s ease-in-out infinite;
+}
+
+.animate-orb-b {
+  animation: orb-b 17s ease-in-out infinite;
+}
+
+/* Stagger helpers */
+.delay-75 {
+  animation-delay: 0.075s;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-150 {
+  animation-delay: 0.15s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACCENT ORNAMENTS
+═══════════════════════════════════════════════════════════════ */
+.accent-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(245, 200, 66, 0.85);
+  animation: pulse-dot 2.2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH PAGES  (login / register — no navbar)
+═══════════════════════════════════════════════════════════════ */
+.auth-input {
+  width: 100%;
+  padding: 11px 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: rgba(245, 200, 66, 0.45);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(245, 200, 66, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--accent);
+  color: #0b0800;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.18s, transform 0.14s, box-shadow 0.18s;
+  box-shadow: 0 4px 22px rgba(245, 200, 66, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.auth-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(245, 200, 66, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.auth-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(245, 200, 66, 0.18);
+}
+
+.auth-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.auth-eye {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.22);
+  padding: 0;
+  display: flex;
+  transition: color 0.15s;
+}
+
+.auth-eye:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 7px;
+}
+
+/* ── Auth page outer wrapper — full-screen centred ── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Auth card — constrained, centred ── */
+.auth-card {
+  animation: fade-up 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 440px;
+  /* never wider than 440px */
+  margin: 0 auto;
+  /* centred when inside a flex parent */
+}
+
+/* On very small screens pull in padding a touch */
+@media (max-width: 480px) {
+  .auth-card {
+    max-width: 100%;
+  }
+
+  .auth-page {
+    padding: 16px 12px;
+  }
+}
+
+.auth-f1 {
+  animation: fade-up 0.48s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-f2 {
+  animation: fade-up 0.48s 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-f3 {
+  animation: fade-up 0.48s 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-f4 {
+  animation: fade-up 0.48s 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-f5 {
+  animation: fade-up 0.48s 0.40s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-err {
+  animation: slide-down 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-ring {
+  animation: spin-ring 8s linear infinite;
+  width: 32px;
+  height: 32px;
+}
+
+/* Prevent inline SVGs inside auth-btn from stretching */
+.auth-btn svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.auth-eye svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
