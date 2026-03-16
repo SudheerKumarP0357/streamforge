@@ -1,0 +1,14 @@
+# ===================================================================
+# StreamForge Personal Vedio Streaming Platform Kubernetes Manifests
+# ===================================================================
+
+# --------- Namespace: streamforge ---------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+
+---

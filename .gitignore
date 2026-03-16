@@ -31,8 +31,9 @@ go.work.sum
 # .idea/
 # .vscode/
 
-**/k8s
+# **/k8s
 **/infra
 **/.env
 **/build
 **/node_modules
+**/**-secrets*.yml

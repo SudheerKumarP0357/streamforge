@@ -1,0 +1,117 @@
+# -------------- Network Policy : Postgres --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-api-transcoder-to-postgres
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: postgres
+      app.kubernetes.io/tier: database
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: api
+              app.kubernetes.io/tier: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: transcoder
+              app.kubernetes.io/tier: backend
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# -------------- Network Policy : Redis --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-api-transcoder-to-redis
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: redis
+      app.kubernetes.io/tier: cache
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: api
+              app.kubernetes.io/tier: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: transcoder
+              app.kubernetes.io/tier: backend
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# -------------- Network Policy : RabbitMq --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-api-transcoder-to-rabbitmq
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: rabbitmq
+      app.kubernetes.io/tier: queue
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: api
+              app.kubernetes.io/tier: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: transcoder
+              app.kubernetes.io/tier: backend
+      ports:
+        - protocol: TCP
+          port: 5672
+
+---
+# -------------- Network Policy : Backend API --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-frontend-to-api
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: api
+      app.kubernetes.io/tier: backend
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamforge
+              app.kubernetes.io/component: frontend
+              app.kubernetes.io/tier: frontend
+      ports:
+        - protocol: TCP
+          port: 8080

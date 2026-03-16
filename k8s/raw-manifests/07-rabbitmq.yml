@@ -1,0 +1,94 @@
+# --------- Deployment : RabbitMQ ---------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/component: rabbitmq
+    app.kubernetes.io/tier: queue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamforge
+      app.kubernetes.io/name: streamforge
+      app.kubernetes.io/component: rabbitmq
+      app.kubernetes.io/tier: queue
+  template:
+    metadata:
+      labels:
+        app: streamforge
+        app.kubernetes.io/name: streamforge
+        app.kubernetes.io/component: rabbitmq
+        app.kubernetes.io/tier: queue
+    spec:
+      containers:
+        - name: streamforge-rabbitmq
+          image: rabbitmq:4.2.4-alpine
+          resources:
+            # limits:
+            #   memory: "128Mi"
+            #   cpu: "500m"
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+          ports:
+            - containerPort: 5672
+              protocol: TCP
+              name: amqp
+            - containerPort: 15672
+              protocol: TCP
+              name: http
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+---
+# --------- Service : RabbitMQ ---------
+apiVersion: v1
+kind: Service
+metadata:
+  name: streamforge-rabbitmq-svc
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/component: rabbitmq
+    app.kubernetes.io/tier: queue
+spec:
+  selector:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/component: rabbitmq
+    app.kubernetes.io/tier: queue
+  ports:
+    - port: 5672
+      targetPort: 5672
+      name: amqp
+    - port: 15672
+      targetPort: 15672
+      name: http
+  type: ClusterIP
+
+---

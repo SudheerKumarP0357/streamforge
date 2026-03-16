@@ -1,0 +1,94 @@
+# --------- Storage Class: Local-Minikube ---------
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+provisioner: rancher.io/local-path
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+
+---
+# --------- Persistent Volume ---------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-streamforge-postgres
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 3Gi
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: streamforge
+  hostPath:
+    path: /streamforge/pg_data
+
+---
+# --------- Persistent Volume Claim : Postgres ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-streamforge-postgres
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: streamforge
+  volumeName: pv-streamforge-postgres
+
+---
+# --------- Persistent Volume : Redis ---------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-streamforge-redis
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: streamforge
+  hostPath:
+    path: /streamforge/redis_data
+
+---
+# --------- Persistent Volume Claim : Redis ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-streamforge-redis
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: streamforge
+  volumeName: pv-streamforge-redis
