@@ -13,5 +13,3 @@ data:
     maxmemory 100mb
     maxmemory-policy allkeys-lru
     appendonly yes
-
----

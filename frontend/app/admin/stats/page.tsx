@@ -5,7 +5,7 @@ import { AdminStats } from '../../../lib/types';
 import { serverApiUrl } from '../../../lib/config';
 
 export default async function AdminStatsPage() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('sf_access_token')?.value;
 
   if (!token) {

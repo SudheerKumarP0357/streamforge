@@ -10,5 +10,3 @@ metadata:
   labels:
     app: streamforge
     app.kubernetes.io/name: streamforge
-
----

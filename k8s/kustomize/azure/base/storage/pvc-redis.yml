@@ -1,0 +1,18 @@
+# --------- Persistent Volume Claim : Redis ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-streamforge-redis
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: persistent-volume-claim
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: streamforge
+  volumeName: pv-streamforge-redis

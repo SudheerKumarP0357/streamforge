@@ -4,8 +4,8 @@ import { getUserRoleFromToken } from '../../../lib/token';
 import { AdminVideo } from '../../../lib/types';
 import { serverApiUrl } from '../../../lib/config';
 
-export default async function AdminVideosPage({ searchParams }: { searchParams: { page?: string } }) {
-  const cookieStore = cookies();
+export default async function AdminVideosPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const cookieStore = await cookies();
   const token = cookieStore.get('sf_access_token')?.value;
 
   if (!token) {
@@ -22,7 +22,8 @@ export default async function AdminVideosPage({ searchParams }: { searchParams: 
     );
   }
 
-  const page = parseInt(searchParams.page || '1', 10);
+  const resolvedParams = await searchParams;
+  const page = parseInt(resolvedParams.page || '1', 10);
   let videos: AdminVideo[] = [];
   let total = 0;
 

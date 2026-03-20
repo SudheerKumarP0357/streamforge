@@ -1,0 +1,889 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-dev
+---
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  labels:
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+data:
+  redis-config: |
+    maxmemory 100mb
+    maxmemory-policy allkeys-lru
+    appendonly yes
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: configmaps
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-redis-config
+  namespace: streamforge-dev
+---
+apiVersion: v1
+data:
+  AZURE_BLOB_HLS_CONTAINER: aGxzLXZpZGVvcw==
+  AZURE_BLOB_RAW_CONTAINER: cmF3LXZpZGVvcw==
+  AZURE_STORAGE_ACCOUNT_KEY: password removed
+  AZURE_STORAGE_ACCOUNT_NAME: c3RyZWFtZm9yZ2V2ZWRpb3M=
+  AZURE_STORAGE_ENDPOINT: aHR0cHM6Ly9zdHJlYW1mb3JnZXZlZGlvcy5ibG9iLmNvcmUud2luZG93cy5uZXQ=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: secrets
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-azst-secrets
+  namespace: streamforge-dev
+---
+apiVersion: v1
+data:
+  CORS_ALLOWED_ORIGIN: aHR0cDovL3N0cmVhbWZvcmdlLWZyb250ZW5kLXN2YzozMDAw
+  JWT_EXPIRY_HOURS: MjQ=
+  JWT_SECRET: c3VwZXItc2VjcmV0LWxvY2FsLWRldi1rZXktMTIzNDU=
+  REFRESH_TOKEN_EXPIRY_DAYS: Nw==
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: secrets
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-common-secrets
+  namespace: streamforge-dev
+---
+apiVersion: v1
+data:
+  COSMOS_CONNECTION_STRING: password removed
+  COSMOS_DATABASE: c3RyZWFtZm9yZ2U=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: secrets
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-mongodb-secret
+  namespace: streamforge-dev
+---
+apiVersion: v1
+data:
+  databaseName: c3RyZWFtZm9yZ2U=
+  password: cG9zdGdyZXM=
+  userName: cG9zdGdyZXM=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: secrets
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-postgres-secrets
+  namespace: streamforge-dev
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-api-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: streamforge-application
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-frontend-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 3000
+  selector:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: streamforge-application
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-postgres-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+  selector:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: streamforge-application
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-rabbitmq-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+  selector:
+    app.kubernetes.io/component: queue
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: streamforge-application
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-redis-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: streamforge-application
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: transcoder
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-transcoder-svc
+  namespace: streamforge-dev
+spec:
+  ports:
+    - port: 9090
+      targetPort: 9090
+  selector:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: transcoder
+    app.kubernetes.io/part-of: streamforge-application
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/component: persistent-volume
+    app.kubernetes.io/part-of: streamforge-application
+  name: pv-streamforge-postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 3Gi
+  hostPath:
+    path: /streamforge/pg_data
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: streamforge
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/component: persistent-volume
+    app.kubernetes.io/part-of: streamforge-application
+  name: pv-streamforge-redis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  hostPath:
+    path: /streamforge/redis_data
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: streamforge
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/component: persistent-volume-claim
+    app.kubernetes.io/part-of: streamforge-application
+  name: pvc-streamforge-postgres
+  namespace: streamforge-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: streamforge
+  volumeMode: Filesystem
+  volumeName: pv-streamforge-postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/component: persistent-volume-claim
+    app.kubernetes.io/part-of: streamforge-application
+  name: pvc-streamforge-redis
+  namespace: streamforge-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: streamforge
+  volumeMode: Filesystem
+  volumeName: pv-streamforge-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-api
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+      app.kubernetes.io/name: api
+      app.kubernetes.io/part-of: streamforge-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: api
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: POSTGRES_HOST
+              value: streamforge-postgres-svc
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: userName
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  key: databaseName
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_SSL_MODE
+              value: disable
+            - name: REDIS_URL
+              value: redis://streamforge-redis-svc:6379
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@streamforge-rabbitmq-svc:5672/?heartbeat=120
+            - name: AZURE_STORAGE_ACCOUNT_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ACCOUNT_NAME
+                  name: streamforge-azst-secrets
+            - name: AZURE_STORAGE_ACCOUNT_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ACCOUNT_KEY
+                  name: streamforge-azst-secrets
+            - name: AZURE_STORAGE_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ENDPOINT
+                  name: streamforge-azst-secrets
+            - name: AZURE_BLOB_RAW_CONTAINER
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_BLOB_RAW_CONTAINER
+                  name: streamforge-azst-secrets
+            - name: AZURE_BLOB_HLS_CONTAINER
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_BLOB_HLS_CONTAINER
+                  name: streamforge-azst-secrets
+            - name: COSMOS_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  key: COSMOS_CONNECTION_STRING
+                  name: streamforge-mongodb-secret
+            - name: COSMOS_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: COSMOS_DATABASE
+                  name: streamforge-mongodb-secret
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: JWT_SECRET
+                  name: streamforge-common-secrets
+            - name: JWT_EXPIRY_HOURS
+              valueFrom:
+                secretKeyRef:
+                  key: JWT_EXPIRY_HOURS
+                  name: streamforge-common-secrets
+            - name: REFRESH_TOKEN_EXPIRY_DAYS
+              valueFrom:
+                secretKeyRef:
+                  key: REFRESH_TOKEN_EXPIRY_DAYS
+                  name: streamforge-common-secrets
+            - name: CORS_ALLOWED_ORIGIN
+              value: http://streamforge-frontend-svc:3000
+          image: sudheer0357/streamforge-api:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - wget -qO- http://localhost:8080/healthz || exit 1
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: streamforge-api
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - wget -qO- http://localhost:8080/healthz || exit 1
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 128Mi
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-postgres-svc 5432; do
+                echo "Waiting for Postgres..."
+                sleep 3
+              done
+              echo "Port is ready"
+          image: busybox:1.36
+          name: wait-for-postgres
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-redis-svc 6379; do
+                echo "Waiting for Redis..."
+                sleep 3
+              done
+              echo "Redis is ready"
+          image: busybox:1.36
+          name: wait-for-redis
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-rabbitmq-svc 5672; do
+                echo "Waiting for RabbitMq..."
+                sleep 3
+              done
+              echo "RabbitMq is ready"
+          image: busybox:1.36
+          name: wait-for-rabbitmq
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-frontend
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+      app.kubernetes.io/name: frontend
+      app.kubernetes.io/part-of: streamforge-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: frontend
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: INTERNAL_API_URL
+              value: http://streamforge-api-svc:8080
+            - name: PUBLIC_API_URL
+              value: http://streamforge-api-svc:8080
+          image: sudheer0357/streamforge-frontend:latest
+          imagePullPolicy: Always
+          name: streamforge-frontend
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 250m
+              memory: 64Mi
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - |
+              until   wget -qO- http://streamforge-api-svc:8080/healthz; do
+                echo "Waiting for Backend API..."
+                sleep 3
+              done
+              echo "Backend API is ready"
+          image: busybox:1.36
+          name: wait-for-backend-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-postgres
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: database
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/part-of: streamforge-application
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: database
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: userName
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  key: databaseName
+                  name: streamforge-postgres-secrets
+          image: postgres:15-alpine
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - streamforge
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: postgres
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - streamforge
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+            requests:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - streamforge
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: pg-data
+      volumes:
+        - name: pg-data
+          persistentVolumeClaim:
+            claimName: pvc-streamforge-postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: queue
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-rabbitmq
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: queue
+      app.kubernetes.io/name: rabbitmq
+      app.kubernetes.io/part-of: streamforge-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: queue
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      containers:
+        - env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+          image: rabbitmq:4.2.4-alpine
+          name: streamforge-rabbitmq
+          ports:
+            - containerPort: 5672
+              name: amqp
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-redis
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cache
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/part-of: streamforge-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: cache
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      containers:
+        - args:
+            - /config/redis.conf
+          command:
+            - redis-server
+          image: redis:alpine
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: streamforge-redis
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 250m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /data
+              name: redis-data
+            - mountPath: /config
+              name: redis-conf
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: pvc-streamforge-redis
+        - configMap:
+            items:
+              - key: redis-config
+                path: redis.conf
+            name: streamforge-redis-config
+          name: redis-conf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/name: transcoder
+    app.kubernetes.io/part-of: streamforge-application
+  name: streamforge-transcoder
+  namespace: streamforge-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+      app.kubernetes.io/name: transcoder
+      app.kubernetes.io/part-of: streamforge-application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/name: transcoder
+        app.kubernetes.io/part-of: streamforge-application
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: transcoder
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: POSTGRES_HOST
+              value: streamforge-postgres-svc
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: userName
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  key: databaseName
+                  name: streamforge-postgres-secrets
+            - name: POSTGRES_SSL_MODE
+              value: disable
+            - name: REDIS_URL
+              value: redis://streamforge-redis-svc:6379
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@streamforge-rabbitmq-svc:5672/?heartbeat=120
+            - name: RABBITMQ_QUEUE
+              value: transcoder.jobs
+            - name: RABBITMQ_DEAD_LETTER_QUEUE
+              value: transcoder.jobs.dlq
+            - name: AZURE_STORAGE_ACCOUNT_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ACCOUNT_NAME
+                  name: streamforge-azst-secrets
+            - name: AZURE_STORAGE_ACCOUNT_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ACCOUNT_KEY
+                  name: streamforge-azst-secrets
+            - name: AZURE_STORAGE_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_STORAGE_ENDPOINT
+                  name: streamforge-azst-secrets
+            - name: AZURE_BLOB_RAW_CONTAINER
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_BLOB_RAW_CONTAINER
+                  name: streamforge-azst-secrets
+            - name: AZURE_BLOB_HLS_CONTAINER
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_BLOB_HLS_CONTAINER
+                  name: streamforge-azst-secrets
+            - name: FFMPEG_PATH
+              value: /usr/bin/ffmpeg
+            - name: TEMP_DIR
+              value: /tmp
+          image: sudheer0357/streamforge-transcoder:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - wget -qO- http://localhost:9090/metrics || exit 1
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: streamforge-transcoder
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - wget -qO- http://localhost:9090/metrics || exit 1
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "2"
+              memory: 3Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-postgres-svc 5432; do
+                echo "Waiting for Postgres..."
+                sleep 3
+              done
+              echo "Port is ready"
+          image: busybox:1.36
+          name: wait-for-postgres
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-redis-svc 6379; do
+                echo "Waiting for Redis..."
+                sleep 3
+              done
+              echo "Redis is ready"
+          image: busybox:1.36
+          name: wait-for-redis
+        - command:
+            - sh
+            - -c
+            - |
+              until nc -z streamforge-rabbitmq-svc 5672; do
+                echo "Waiting for RabbitMq..."
+                sleep 3
+              done
+              echo "RabbitMq is ready"
+          image: busybox:1.36
+          name: wait-for-rabbitmq

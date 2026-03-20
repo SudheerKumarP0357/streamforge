@@ -455,7 +455,7 @@ TEMP_DIR=/tmp
 ### Next.js Frontend (`frontend`)
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
+API_URL=http://localhost:8080
 JWT_COOKIE_NAME=sf_access_token
 ```
 

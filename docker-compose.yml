@@ -8,8 +8,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      INTERNAL_API_URL: http://api:8080
-      PUBLIC_API_URL: http://localhost:8080
+      API_URL: http://api:8080
     networks:
       - streamforge
     healthcheck:

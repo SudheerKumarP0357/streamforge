@@ -8,18 +8,8 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const publicApiUrl = process.env.PUBLIC_API_URL || process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8080";
-  const envScript = `
-    window.__ENV = {
-      PUBLIC_API_URL: "${publicApiUrl}"
-    };
-  `;
-
   return (
-    <html lang="en" className="scroll-smooth">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: envScript }} />
-      </head>
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body className="min-h-screen overflow-x-hidden">
 
         {/* Fixed ambient background — sits behind everything */}

@@ -6,7 +6,7 @@ import { getUserIdFromToken } from '../../lib/token'
 import { serverApiUrl } from '../../lib/config'
 
 export async function deleteVideoAction(videoId: string): Promise<{ success: boolean; error?: string }> {
-  const token = cookies().get('sf_access_token')?.value
+  const token = (await cookies()).get('sf_access_token')?.value
   if (!token) return { success: false, error: 'Not authenticated' }
 
   const userId = getUserIdFromToken(token)
@@ -28,9 +28,9 @@ export async function deleteVideoAction(videoId: string): Promise<{ success: boo
 
     // Surgically invalidate ONLY this user's video list cache
     if (userId) {
-      revalidateTag(`user-videos-${userId}`)     // ← busts the dashboard fetch
+      revalidateTag(`user-videos-${userId}`, 'max')     // ← busts the dashboard fetch
     }
-    revalidateTag(`video-${videoId}`)            // ← busts the single video fetch
+    revalidateTag(`video-${videoId}`, 'max')            // ← busts the single video fetch
 
     return { success: true }
 

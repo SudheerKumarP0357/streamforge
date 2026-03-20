@@ -154,7 +154,6 @@ Generate the complete skeleton for `frontend/` including:
 
 2. `next.config.js` that:
    - Enables strict mode
-   - Configures NEXT_PUBLIC_API_URL from environment
 
 3. `tailwind.config.ts` with:
    - Content paths for app/ and components/

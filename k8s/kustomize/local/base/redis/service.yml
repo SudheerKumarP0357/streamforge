@@ -1,0 +1,19 @@
+# --------- Service : Redis ---------
+apiVersion: v1
+kind: Service
+metadata:
+  name: streamforge-redis-svc
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: cache
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: cache
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP

@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
-const BACKEND = process.env.INTERNAL_API_URL || 'http://localhost:8080'
+const BACKEND = process.env.API_URL || 'http://localhost:8080'
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params.path, 'GET')
+export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+  return proxy(req, path, 'GET')
 }
 
-export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params.path, 'POST')
+export async function POST(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+  return proxy(req, path, 'POST')
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params.path, 'DELETE')
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+  return proxy(req, path, 'DELETE')
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxy(req, params.path, 'PUT')
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+  return proxy(req, path, 'PUT')
 }
 
 async function proxy(req: NextRequest, pathSegments: string[], method: string) {
@@ -24,7 +28,7 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const search = req.nextUrl.search
   const url = `${BACKEND}/api/v1/${path}${search}`
 
-  const token = cookies().get('sf_access_token')?.value
+  const token = (await cookies()).get('sf_access_token')?.value
 
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`

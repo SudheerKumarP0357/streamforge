@@ -1,30 +1,18 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { Video } from "../../../lib/types";
 import { serverApiUrl } from "../../../lib/config";
-
-/* Dynamically import VideoPlayer to avoid SSR issues with video.js */
-const VideoPlayer = dynamic(
-  () => import('../../../components/VideoPlayer'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full max-w-4xl mx-auto mt-6 h-64 bg-gray-900 rounded-lg animate-pulse flex items-center justify-center">
-        <span className="text-gray-500 text-sm">Loading player...</span>
-      </div>
-    )
-  }
-);
+import VideoPlayerWrapper from "../../../components/VideoPlayerWrapper";
 
 const BASE_URL = serverApiUrl;
 
 export default async function WatchPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const cookieStore = cookies();
+  const { id } = await params;
+  const cookieStore = await cookies();
   const token = cookieStore.get("sf_access_token")?.value;
 
   /* ── Auth guard ── */
@@ -53,9 +41,9 @@ export default async function WatchPage({
 
   try {
     /* 1 — metadata */
-    const metaRes = await fetch(`${BASE_URL}/api/v1/videos/${params.id}`, {
+    const metaRes = await fetch(`${BASE_URL}/api/v1/videos/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
-      next: { tags: [`video-${params.id}`], revalidate: 300 },
+      next: { tags: [`video-${id}`], revalidate: 300 },
     });
     if (!metaRes.ok) {
       error =
@@ -69,7 +57,7 @@ export default async function WatchPage({
     /* 2 — stream URL */
     if (video?.status === "ready") {
       const streamRes = await fetch(
-        `${BASE_URL}/api/v1/videos/${params.id}/stream`,
+        `${BASE_URL}/api/v1/videos/${id}/stream`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',   // ← SAS URLs expire — never cache this
@@ -384,7 +372,7 @@ export default async function WatchPage({
             }}
           >
             {streamUrl ? (
-              <VideoPlayer
+              <VideoPlayerWrapper
                 videoId={video.id}
                 src={streamUrl}
                 title={video.title}

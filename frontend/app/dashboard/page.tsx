@@ -8,7 +8,7 @@ import { serverApiUrl } from '../../lib/config';
 const BASE_URL = serverApiUrl;
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('sf_access_token')?.value;
 
   let videos: Video[] = [];

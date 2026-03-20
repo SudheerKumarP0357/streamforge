@@ -1,0 +1,8 @@
+# --------- Namespace: streamforge ---------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: streamforge
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/name: streamforge
