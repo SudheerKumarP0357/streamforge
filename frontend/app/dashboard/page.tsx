@@ -4,6 +4,7 @@ import { Video } from '../../lib/types';
 import VideoGrid from '../../components/VideoGrid';
 import { getUserIdFromToken } from '../../lib/token';
 import { serverApiUrl } from '../../lib/config';
+import { logger } from '../../lib/logger';
 
 const BASE_URL = serverApiUrl;
 
@@ -16,18 +17,25 @@ export default async function DashboardPage() {
   if (token) {
     const userId = getUserIdFromToken(token);
 
+    const fetchUrl = `${BASE_URL}/api/v1/videos?limit=50`;
+    logger.serverFetch('GET', fetchUrl, { userId, backend: BASE_URL });
+
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/videos?limit=50`, {
+      const res = await fetch(fetchUrl, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
+      logger.info('[DashboardPage]', 'Videos fetch response', { status: res.status, ok: res.ok });
       if (res.ok) {
         const data = await res.json();
         videos = data.videos || [];
+        logger.info('[DashboardPage]', `Loaded ${videos.length} videos`);
       }
     } catch (e) {
-      console.error('Failed to fetch videos:', e);
+      logger.error('[DashboardPage]', 'Failed to fetch videos', e);
     }
+  } else {
+    logger.warn('[DashboardPage]', 'No access token found in cookies');
   }
 
   return (

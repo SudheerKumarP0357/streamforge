@@ -4,6 +4,7 @@ import Link from 'next/link';
 import VideoCard from './VideoCard';
 import { Video } from '../lib/types';
 import { videos as videosApi } from '../lib/api';
+import { logger } from '../lib/logger';
 
 interface VideoGridProps {
   initialVideos: Video[];
@@ -36,10 +37,12 @@ export default function VideoGrid({ initialVideos }: VideoGridProps) {
     setIsSearching(true);
     debounceTimerRef.current = setTimeout(async () => {
       try {
+        logger.info('[VideoGrid]', 'Searching videos', { query: searchQuery.trim() });
         const response = await videosApi.search(searchQuery.trim(), 1, 50);
+        logger.info('[VideoGrid]', `Search returned ${response.videos.length} results`);
         setVideos(response.videos);
       } catch (error) {
-        console.error('Failed to search videos:', error);
+        logger.error('[VideoGrid]', 'Failed to search videos', { query: searchQuery.trim(), error });
       } finally {
         setIsSearching(false);
       }

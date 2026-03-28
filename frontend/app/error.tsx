@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { logger } from '../lib/logger';
 
 export default function Error({
   error,
@@ -11,10 +12,12 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Global Error Boundary caught:', error);
-    }
+    // Log the error — silenced in production via APP_ENV
+    logger.error('[ErrorBoundary]', 'Global error caught', {
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    });
   }, [error]);
 
   return (

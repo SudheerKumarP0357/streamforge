@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '../../../lib/api';
+import { logger } from '../../../lib/logger';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,12 +26,17 @@ export default function RegisterPage() {
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
+    logger.info('[RegisterPage]', 'Submitting registration form', { email });
     try {
+      logger.info('[RegisterPage]', 'Calling auth.register', { email });
       await auth.register(email, password);
+      logger.info('[RegisterPage]', 'Registration successful, auto-logging in');
       await auth.login(email, password);
+      logger.info('[RegisterPage]', 'Auto-login successful, redirecting to dashboard');
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
+      logger.error('[RegisterPage]', 'Registration failed', { email, error: err?.error });
       const msg = err?.error?.toLowerCase() || '';
       if (msg.includes('duplicate') || msg.includes('exists') || msg.includes('taken') || msg.includes('already')) {
         setError('Email address is already in use.');

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '../../../lib/api';
+import { logger } from '../../../lib/logger';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,11 +23,14 @@ export default function LoginPage() {
     if (!password) { setError('Please enter your password.'); return; }
 
     setLoading(true);
+    logger.info('[LoginPage]', 'Submitting login form', { email });
     try {
       await auth.login(email, password);
+      logger.info('[LoginPage]', 'Login successful, redirecting to dashboard');
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
+      logger.error('[LoginPage]', 'Login failed', { email, error: err?.error });
       setError(err?.error || 'Invalid email or password.');
     } finally {
       setLoading(false);

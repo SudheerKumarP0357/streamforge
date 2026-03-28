@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { WatchHistory } from '../../lib/types';
 import { serverApiUrl } from '../../lib/config';
+import { logger } from '../../lib/logger';
 
 const BASE_URL = serverApiUrl
 
@@ -12,18 +13,24 @@ export default async function HistoryPage() {
   let history: WatchHistory[] = [];
 
   if (token) {
+    const fetchUrl = `${BASE_URL}/api/v1/watch/history`;
+    logger.serverFetch('GET', fetchUrl, { backend: BASE_URL });
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/watch/history`, {
+      const res = await fetch(fetchUrl, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       });
+      logger.info('[HistoryPage]', 'History fetch response', { status: res.status });
       if (res.ok) {
         const data = await res.json();
         history = data.history || [];
+        logger.info('[HistoryPage]', `Loaded ${history.length} history items`);
       }
     } catch (e) {
-      console.error('Failed to fetch history:', e);
+      logger.error('[HistoryPage]', 'Failed to fetch history', e);
     }
+  } else {
+    logger.warn('[HistoryPage]', 'No access token found in cookies');
   }
 
   return (

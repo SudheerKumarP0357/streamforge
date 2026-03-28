@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getUserRoleFromToken } from '../../../lib/token';
 import { AdminVideo } from '../../../lib/types';
 import { serverApiUrl } from '../../../lib/config';
+import { logger } from '../../../lib/logger';
 
 export default async function AdminVideosPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const cookieStore = await cookies();
@@ -27,18 +28,23 @@ export default async function AdminVideosPage({ searchParams }: { searchParams: 
   let videos: AdminVideo[] = [];
   let total = 0;
 
+  const fetchUrl = `${serverApiUrl}/api/v1/admin/videos?page=${page}&limit=50`;
+  logger.serverFetch('GET', fetchUrl, { page, backend: serverApiUrl });
+
   try {
-    const res = await fetch(`${serverApiUrl}/api/v1/admin/videos?page=${page}&limit=50`, {
+    const res = await fetch(fetchUrl, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store'
     });
+    logger.info('[AdminVideosPage]', 'Admin videos fetch response', { status: res.status, page });
     if (res.ok) {
       const data = await res.json();
       videos = data.videos || [];
       total = data.total || 0;
+      logger.info('[AdminVideosPage]', `Loaded ${videos.length} videos (total: ${total})`);
     }
   } catch (e) {
-    console.error('Failed to fetch admin videos:', e);
+    logger.error('[AdminVideosPage]', 'Failed to fetch admin videos', e);
   }
 
   return (

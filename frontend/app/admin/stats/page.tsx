@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getUserRoleFromToken } from '../../../lib/token';
 import { AdminStats } from '../../../lib/types';
 import { serverApiUrl } from '../../../lib/config';
+import { logger } from '../../../lib/logger';
 
 export default async function AdminStatsPage() {
   const cookieStore = await cookies();
@@ -24,16 +25,21 @@ export default async function AdminStatsPage() {
 
   let stats: AdminStats | null = null;
   
+  const fetchUrl = `${serverApiUrl}/api/v1/admin/stats`;
+  logger.serverFetch('GET', fetchUrl, { backend: serverApiUrl });
+
   try {
-    const res = await fetch(`${serverApiUrl}/api/v1/admin/stats`, {
+    const res = await fetch(fetchUrl, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store'
     });
+    logger.info('[AdminStatsPage]', 'Stats fetch response', { status: res.status });
     if (res.ok) {
       stats = await res.json();
+      logger.info('[AdminStatsPage]', 'Admin stats loaded', { totalUsers: stats?.total_users, totalVideos: stats?.total_videos });
     }
   } catch (e) {
-    console.error('Failed to fetch admin stats:', e);
+    logger.error('[AdminStatsPage]', 'Failed to fetch admin stats', e);
   }
 
   if (!stats) {

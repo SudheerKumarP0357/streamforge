@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Video } from "../../../lib/types";
 import { serverApiUrl } from "../../../lib/config";
 import VideoPlayerWrapper from "../../../components/VideoPlayerWrapper";
+import { logger } from "../../../lib/logger";
 
 const BASE_URL = serverApiUrl;
 
@@ -41,35 +42,47 @@ export default async function WatchPage({
 
   try {
     /* 1 — metadata */
-    const metaRes = await fetch(`${BASE_URL}/api/v1/videos/${id}`, {
+    const metaUrl = `${BASE_URL}/api/v1/videos/${id}`;
+    logger.serverFetch('GET', metaUrl, { videoId: id });
+    const metaRes = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${token}` },
       next: { tags: [`video-${id}`], revalidate: 300 },
     });
+    logger.info('[WatchPage]', 'Video metadata response', { status: metaRes.status, videoId: id });
     if (!metaRes.ok) {
       error =
         metaRes.status === 404
           ? "Video not found."
           : "Failed to load video information.";
+      logger.error('[WatchPage]', error, { status: metaRes.status, videoId: id });
       throw new Error(error);
     }
     video = await metaRes.json();
+    logger.info('[WatchPage]', 'Video metadata loaded', { videoId: id, status: video?.status, title: video?.title });
 
     /* 2 — stream URL */
     if (video?.status === "ready") {
+      const streamEndpoint = `${BASE_URL}/api/v1/videos/${id}/stream`;
+      logger.serverFetch('GET', streamEndpoint, { videoId: id });
       const streamRes = await fetch(
-        `${BASE_URL}/api/v1/videos/${id}/stream`,
+        streamEndpoint,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',   // ← SAS URLs expire — never cache this
         },
       );
+      logger.info('[WatchPage]', 'Stream URL response', { status: streamRes.status, videoId: id });
       if (streamRes.ok) {
         const streamData = await streamRes.json();
         streamUrl = streamData.master_playlist_url;
         sasToken = streamData.sas_token;             // ← add this
+        logger.info('[WatchPage]', 'Stream URL obtained', { videoId: id, hasStreamUrl: !!streamUrl, hasSasToken: !!sasToken });
       } else {
         error = "Failed to retrieve stream URL.";
+        logger.error('[WatchPage]', error, { status: streamRes.status, videoId: id });
       }
+    } else {
+      logger.info('[WatchPage]', 'Video not ready for streaming', { videoId: id, status: video?.status });
     }
 
     /* ── Error state ── */
@@ -278,9 +291,7 @@ export default async function WatchPage({
     }
 
     /* ── Ready state ── */
-    console.log('[watch page] video status:', video.status);
-    console.log('[watch page] stream URL fetched:', !!streamUrl);
-    console.log('[watch page] stream URL preview:', streamUrl?.substring(0, 80));
+    logger.info('[WatchPage]', 'Rendering video player', { videoId: id, hasStreamUrl: !!streamUrl, hasSasToken: !!sasToken });
 
     return (
       <div style={{ paddingTop: "var(--nav-h)" }}>
