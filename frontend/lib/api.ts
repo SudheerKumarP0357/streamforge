@@ -123,7 +123,10 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
   }
 
   // Generate random UUID for request tracing
-  const requestId = crypto.randomUUID();
+  // const requestId = crypto.randomUUID();
+  const requestId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).substring(2) + Date.now().toString(36);
   headers.set('X-Request-ID', requestId);
 
   if (body && !(body instanceof FormData)) {
@@ -309,7 +312,7 @@ export const admin = {
     const params = new URLSearchParams();
     if (page !== undefined) params.append('page', page.toString());
     if (limit !== undefined) params.append('limit', limit.toString());
-    
+
     const qs = params.toString() ? `?${params.toString()}` : '';
     logger.info('[admin.getVideos]', 'Fetching admin video list', { page, limit });
     return fetchWithAuth(`/admin/videos${qs}`);

@@ -3,16 +3,10 @@
 ARG NODE_VERSION=24.11.0
 
 FROM node:${NODE_VERSION}-alpine AS base
+
 WORKDIR /app
 
-FROM base AS deps
-
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
-
-FROM deps AS build
+FROM base AS build
 
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=package-lock.json,target=package-lock.json \

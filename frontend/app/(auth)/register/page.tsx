@@ -29,7 +29,19 @@ export default function RegisterPage() {
     logger.info('[RegisterPage]', 'Submitting registration form', { email });
     try {
       logger.info('[RegisterPage]', 'Calling auth.register', { email });
-      await auth.register(email, password);
+      console.log('DEBUG', {
+        baseUrl: '/api/proxy',
+        windowExists: typeof window !== 'undefined',
+        fetchExists: typeof fetch !== 'undefined',
+        cryptoExists: typeof crypto !== 'undefined',
+      })
+      try {
+        await auth.register(email, password);
+        console.log('DEBUG', 'Registration successful');
+      } catch (err: any) {
+        logger.error('[RegisterPage]', 'Registration failed', { email, error: err?.error });
+        throw err;
+      }
       logger.info('[RegisterPage]', 'Registration successful, auto-logging in');
       await auth.login(email, password);
       logger.info('[RegisterPage]', 'Auto-login successful, redirecting to dashboard');

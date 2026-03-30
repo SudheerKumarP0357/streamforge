@@ -9,6 +9,7 @@ services:
       - "3000:3000"
     environment:
       API_URL: http://api:8080
+      API_ENV: development
     networks:
       - streamforge
     healthcheck:
