@@ -64,6 +64,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          working-directory: ./frontend
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
