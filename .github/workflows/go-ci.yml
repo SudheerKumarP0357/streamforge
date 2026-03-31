@@ -38,5 +38,5 @@ jobs:
           IMAGE_NAME: ${{ github.repository }}
           ARTIFACT_NAME: api
           CONTEXT_PATH: ./backend/api
-          DOCKERFILE_NAME: ./backend/api/Dockerfile
+          DOCKERFILE_NAME: Dockerfile
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
