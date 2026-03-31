@@ -2,8 +2,7 @@ name: Streamforge Frontend CI
 
 on:
   push:
-    branches:
-      - pipelines**
+    branches: ["*"]
 
 env:
   REGISTRY: ghcr.io
