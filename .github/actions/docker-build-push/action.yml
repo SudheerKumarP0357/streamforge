@@ -1,8 +1,11 @@
 description: "Docker Login, Build & Push"
+name: "docker-login-build-push"
 inputs:
   REGISTRY:
+    description: "Container Image Registry Address"
     required: true
   IMAGE_NAME:
+    description: "Conatiner Image Name"
     required: true
   ARTIFACT_NAME:
     description: "Name of the Application (ex: frontend, api, transcoder)"
@@ -11,9 +14,13 @@ inputs:
     description: "Context path for the source code where the Dockerfile resides"
     required: true
   DOCKERFILE_NAME:
+    description: "Docker filename with relative path"
+    required: true
+  GITHUB_TOKEN:
+    description: "PAT token to push the images to registry"
     required: true
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Checkout repository
       uses: actions/checkout@v5
@@ -23,7 +30,7 @@ runs:
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ inputs.GITHUB_TOKEN }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
