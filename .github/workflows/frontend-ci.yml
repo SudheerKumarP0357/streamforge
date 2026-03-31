@@ -22,10 +22,10 @@ jobs:
           node-version: [24.x] 
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 24.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 24.x
         cache: 'npm'
         cache-dependency-path: ./frontend/package-lock.json
     - run: npm ci
@@ -64,8 +64,8 @@ jobs:
         uses: docker/build-push-action@v7.0.0
         id: push
         with:
-          context: ./frontend/Dockerfile
-          file: Dockerfile
+          # context: ./frontend/Dockerfile
+          file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
