@@ -32,12 +32,13 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
-
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -56,15 +57,15 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       
       - name: Build and push Docker images
-        uses: docker/build-push-action@v7.0.0
+        uses: docker/build-push-action@v7.0.0       
         id: push
         with:
-          context: .
+          context: ./frontend/Dockerfile
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          working-directory: ./frontend
+          
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
