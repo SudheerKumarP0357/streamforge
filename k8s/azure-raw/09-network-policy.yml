@@ -1,0 +1,52 @@
+# -------------- Network Policy : RabbitMq --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-api-and-transcoder-to-rabbitmq
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+      app.kubernetes.io/component: queue
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api
+              app.kubernetes.io/component: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: transcoder
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 5672
+
+---
+# -------------- Network Policy : Backend API --------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-frontend-to-api
+  namespace: streamforge
+  labels:
+    app: streamforge
+    app.kubernetes.io/name: streamforge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api
+      app.kubernetes.io/component: backend
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+              app.kubernetes.io/name: frontend
+      ports:
+        - protocol: TCP
+          port: 8080

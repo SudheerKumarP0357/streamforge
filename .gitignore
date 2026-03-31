@@ -32,13 +32,12 @@ go.work.sum
 # .vscode/
 
 # **/k8s
-**/infra
+# **/infra
 **/.env
 **/build
 **/node_modules
 **/**-secrets*.yml
 
 **/terraform.sh
-
 **/.terraform
 **/.terraform*

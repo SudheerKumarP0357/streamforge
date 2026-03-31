@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sf-configmaps
+  namespace: streamforge
+data:
+  RABBITMQ_DEFAULT_USER: streamforge
+  POSTGRES_HOST: psqlstreamforgedevci.postgres.database.azure.com
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: streamforge
+  POSTGRES_DB: streamforge
+  POSTGRES_SSL_MODE: require
+  REDIS_HOST: amrstreamforgedev.centralindia.redis.azure.net
+  REDIS_PORT: "10000"
+  REDIS_URL: rediss://amrstreamforgedev.centralindia.redis.azure.net:10000
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_HOST: sf-rabbitmq-svc
+  AZURE_STORAGE_ACCOUNT_NAME: ststreamforgedevci
+  AZURE_STORAGE_ENDPOINT: https://ststreamforgedevci.blob.core.windows.net/
+  AZURE_BLOB_RAW_CONTAINER: raw-videos
+  AZURE_BLOB_HLS_CONTAINER: hls-videos
+  COSMOS_DATABASE: streamforge
+  JWT_EXPIRY_HOURS: "24"
+  REFRESH_TOKEN_EXPIRY_DAYS: "7"
+  CORS_ALLOWED_ORIGIN: http://streamforge.sudheer.fun/
+  FFMPEG_PATH: /usr/bin/ffmpeg
+  TEMP_DIR: /tmp

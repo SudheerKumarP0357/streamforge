@@ -1,0 +1,14 @@
+# --------- Storage Class: Azure Disk ---------
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: streamforge-azure-csi
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/name: streamforge
+provisioner: disk.csi.azure.com
+parameters:
+  skuname: Standard_LRS
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

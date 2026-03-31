@@ -1,0 +1,17 @@
+# --------- Persistent Volume Claim : RabbitMq ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-streamforge-rabbitmq
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/name: streamforge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: streamforge-azure-csi
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem

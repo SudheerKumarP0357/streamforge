@@ -1,0 +1,33 @@
+# --------- Storage Class: Azure Disk ---------
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: sf-azure-csi
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/name: streamforge
+provisioner: disk.csi.azure.com
+parameters:
+  skuname: Standard_LRS
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+
+---
+# --------- Persistent Volume Claim : RabbitMq ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-streamforge-rabbitmq
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/name: streamforge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: sf-azure-csi
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem

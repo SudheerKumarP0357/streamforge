@@ -1,0 +1,18 @@
+# --------- Service : Transcoder ---------
+apiVersion: v1
+kind: Service
+metadata:
+  name: sf-transcoder-svc
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/name: transcoder
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    app.kubernetes.io/name: transcoder
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: backend
+  ports:
+    - port: 9090
+      targetPort: 9090

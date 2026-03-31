@@ -1,0 +1,20 @@
+# --------- Service : RabbitMQ ---------
+apiVersion: v1
+kind: Service
+metadata:
+  name: sf-rabbitmq-svc
+  namespace: streamforge
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: queue
+spec:
+  selector:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: queue
+  ports:
+    - port: 5672
+      targetPort: 5672
+      name: amqp
+  type: ClusterIP

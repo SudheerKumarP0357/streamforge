@@ -1,0 +1,31 @@
+#cloud-config
+package_update: true
+# package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - unzip
+  - git
+  - lsb-release
+
+runcmd:
+  # kubectl install
+  - mkdir -p -m 755 /etc/apt/keyrings
+  - curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  - chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  - echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  - sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+  - sudo apt-get update
+  - sudo apt-get install -y kubectl
+
+  # Az cli install
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+  # Login with az-cli
+  - az login --identity
+
+  # Get AKS credentials
+  - az aks get-credentials -n streamforgedevci -g rg-streamforge-dev-ci
