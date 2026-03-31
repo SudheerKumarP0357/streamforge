@@ -5,9 +5,8 @@ name: Streamforge Frontend CI
 
 on:
   push:
-    branches: [ "*" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - pipelines**
     
 env:
   REGISTRY: ghcr.io
@@ -16,10 +15,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-          node-version: [24.x] 
     steps:
     - uses: actions/checkout@v4
     - name: Use Node.js 24.x
@@ -64,7 +59,7 @@ jobs:
         uses: docker/build-push-action@v7.0.0
         id: push
         with:
-          # context: ./frontend/Dockerfile
+          context: .
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
