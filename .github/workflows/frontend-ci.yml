@@ -60,7 +60,7 @@ jobs:
         uses: docker/build-push-action@v7.0.0       
         id: push
         with:
-          context: ./frontend/Dockerfile
+          context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
