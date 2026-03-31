@@ -1,0 +1,49 @@
+description: "Docker Login, Build & Push"
+inputs:
+  REGISTRY:
+    required: true
+  IMAGE_NAME:
+    required: true
+  ARTIFACT_NAME:
+    description: "Name of the Application (ex: frontend, api, transcoder)"
+    required: true
+  CONTEXT_PATH:
+    description: "Context path for the source code where the Dockerfile resides"
+    required: true
+  DOCKERFILE_NAME:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Docker Login
+      uses: docker/login-action@v4.0.0
+      with:
+        registry: ${{ inputs.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      with:
+        images: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME }}/${{ inputs.ARTIFACT_NAME }}
+
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v7.0.0
+      id: push
+      with:
+        context: ${{ inputs.CONTEXT_PATH }}
+        file: ${{ inputs.CONTEXT_PATH }}/${{ inputs.DOCKERFILE_NAME }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Generate artifact attestation
+      uses: actions/attest@v4
+      with:
+        subject-name: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME}}/${{ inputs.ARTIFACT_NAME }}
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true
