@@ -5,25 +5,22 @@ metadata:
   name: redis
   namespace: streamforge
   labels:
-    app: streamforge
-    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: redis
     app.kubernetes.io/tier: cache
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: streamforge
-      app.kubernetes.io/name: streamforge
-      app.kubernetes.io/component: redis
-      app.kubernetes.io/tier: cache
+      app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/tier: cache
   template:
     metadata:
       labels:
-        app: streamforge
-        app.kubernetes.io/name: streamforge
-        app.kubernetes.io/component: redis
-        app.kubernetes.io/tier: cache
+        app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/tier: cache
     spec:
       containers:
         - name: streamforge-redis
@@ -76,17 +73,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: streamforge-redis-svc
+  name: sf-redis-svc
   namespace: streamforge
   labels:
-    app: streamforge
-    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: redis
     app.kubernetes.io/tier: cache
 spec:
   selector:
-    app: streamforge
-    app.kubernetes.io/name: streamforge
+    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: redis
     app.kubernetes.io/tier: cache
   ports:

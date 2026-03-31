@@ -1,15 +1,31 @@
-# --------- ConfigMap : Redis ---------
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cm-streamforge-redis
+  name: sf-configmaps
   namespace: streamforge
   labels:
-    app: streamforge
+    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/name: streamforge
     app.kubernetes.io/component: configmaps
 data:
-  redis-config: |
-    maxmemory 100mb
-    maxmemory-policy allkeys-lru
-    appendonly yes
+  POSTGRES_HOST: sf-postgres-svc
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: streamforge
+  POSTGRES_DB: streamforge
+  POSTGRES_SSL_MODE: require
+  REDIS_HOST: sf-redis-svc
+  REDIS_PORT: "6379"
+  REDIS_URL: rediss://sf-redis-svc:6379
+  RABBITMQ_DEFAULT_USER: streamforge
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_HOST: sf-rabbitmq-svc
+  AZURE_STORAGE_ACCOUNT_NAME: ststreamforgedevci
+  AZURE_STORAGE_ENDPOINT: https://ststreamforgedevci.blob.core.windows.net/
+  AZURE_BLOB_RAW_CONTAINER: raw-videos
+  AZURE_BLOB_HLS_CONTAINER: hls-videos
+  COSMOS_DATABASE: streamforge
+  JWT_EXPIRY_HOURS: "24"
+  REFRESH_TOKEN_EXPIRY_DAYS: "7"
+  CORS_ALLOWED_ORIGIN: http://streamforge.sudheer.fun/
+  FFMPEG_PATH: /usr/bin/ffmpeg
+  TEMP_DIR: /tmp

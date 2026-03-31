@@ -38,18 +38,6 @@ spec:
                 sleep 3
               done
               echo "Backend API is ready"
-          # InitContainer for Transcoder API
-        # - name: wait-for-transcoder-api
-        #   image: busybox:1.36
-        #   command:
-        #     - sh
-        #     - -c
-        #     - |
-        #       until wget -qO- http://streamforge-transcoder-svc.streamforge.svc.cluster.local:9090/metrics; do
-        #         echo "Waiting for Transcoder API..."
-        #         sleep 3
-        #       done
-        #       echo "Transcoder API is ready"
       containers:
         - name: streamforge-frontend
           image: sudheer0357/streamforge-frontend:latest

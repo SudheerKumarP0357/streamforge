@@ -8,5 +8,5 @@ kind: Namespace
 metadata:
   name: streamforge
   labels:
-    app: streamforge
+    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/name: streamforge
