@@ -2,25 +2,24 @@ name: Backend API CI
 
 on:
   push:
-    branches: [ "*" ]
+    branches: ["*"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24.0'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.24.0"
 
-    - name: Build
-      run: go build -v ./cmd/server/main.go
-      working-directory: ./backend/api
+      - name: Build
+        run: go build -v ./cmd/server/main.go
+        working-directory: ./backend/api
 
   docker:
     runs-on: ubuntu-latest
@@ -30,7 +29,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
-      
+
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/docker-build-push
@@ -40,3 +39,4 @@ jobs:
           ARTIFACT_NAME: api
           CONTEXT_PATH: ./backend/api
           DOCKERFILE_NAME: ./backend/api/Dockerfile
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

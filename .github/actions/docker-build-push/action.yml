@@ -16,6 +16,9 @@ inputs:
   DOCKERFILE_NAME:
     description: "Docker filename with relative path"
     required: true
+  GITHUB_TOKEN:
+    description: "PAT token to push the images to registry"
+    required: true
 runs:
   using: composite
   steps:
@@ -27,7 +30,7 @@ runs:
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ inputs.GITHUB_TOKEN }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
