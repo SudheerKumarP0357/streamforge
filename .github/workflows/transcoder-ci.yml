@@ -2,7 +2,17 @@ name: Backend Transcoder CI
 
 on:
   push:
-    branches: ["*"]
+    branches:
+      - "main"
+      - "releases/**"
+    paths:
+      - "./backend/transcoder/*"
+  pull_request:
+    branches:
+      - "main"
+      - "releases/**"
+    paths:
+      - "./backend/transcoder/*"
 
 jobs:
   build:
