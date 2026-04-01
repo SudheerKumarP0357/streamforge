@@ -1,3 +1,4 @@
+---
 # --------- Storage Class: Local-Minikube ---------
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

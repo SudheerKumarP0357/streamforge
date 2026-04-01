@@ -1,0 +1,371 @@
+---
+# =============================================================================
+# StreamForge — golangci-lint Configuration
+# =============================================================================
+# Applies to: backend/api and backend/transcoder Go modules
+# Go version: 1.24
+# Run: golangci-lint run ./... (from backend/api or backend/transcoder)
+# =============================================================================
+
+run:
+  # Timeout for the entire linting operation
+  timeout: 5m
+
+  # Go version to target
+  go: "1.24"
+
+  # Skip directories that don't contain application Go code
+  skip-dirs:
+    - vendor
+    - node_modules
+    - frontend
+    - infra
+    - k8s
+    - docs
+    - migrations
+
+  # Only lint Go files
+  skip-files:
+    - ".*_test\\.go$"
+
+  # Allow parallel linter execution
+  concurrency: 4
+
+# =============================================================================
+# Output Configuration
+# =============================================================================
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
+
+# =============================================================================
+# Linters
+# =============================================================================
+linters:
+  disable-all: true
+  enable:
+    # --- Default / Essential ---
+    - errcheck # Check for unchecked errors (critical for DB/storage/queue calls)
+    - gosimple # Simplify code constructs
+    - govet # Report suspicious constructs (printf args, struct tags, etc.)
+    - ineffassign # Detect ineffectual assignments
+    - staticcheck # Advanced static analysis (SA*, S*, ST*, QF* checks)
+    - unused # Find unused code
+
+    # --- Bug Detection ---
+    - bodyclose # Ensure HTTP response bodies are closed (important for API client calls)
+    - durationcheck # Detect incorrect time.Duration multiplication
+    - exportloopref # Detect loop variable capture bugs in goroutines
+    - nilerr # Detect returning nil when err is not nil
+    - sqlclosecheck # Ensure sql.Rows/sql.Stmt are closed (safety net even with pgx)
+
+    # --- Error Handling (aligns with project convention: always wrap with %w) ---
+    - errorlint # Enforce correct error wrapping/comparison patterns
+    - wrapcheck # Ensure errors from external packages are wrapped
+
+    # --- Code Quality ---
+    - gocognit # Cognitive complexity threshold (keep handlers readable)
+    - goconst # Find repeated string literals that should be constants
+    - gocritic # Broad set of opinionated checks (diagnostic, style, performance)
+    - gofmt # Enforce standard Go formatting
+    - goimports # Enforce import ordering and formatting
+    - gosec # Security-oriented checks (SQL injection, hardcoded creds, etc.)
+    - misspell # Catch common spelling mistakes in comments/strings
+    - nakedret # Disallow naked returns in larger functions
+    - prealloc # Suggest slice pre-allocation where beneficial
+    - revive # Configurable replacement for golint
+    - unconvert # Remove unnecessary type conversions
+    - unparam # Find unused function parameters
+    - whitespace # Detect unnecessary blank lines
+
+    # --- Style & Consistency ---
+    - asciicheck # Ensure identifiers contain only ASCII characters
+    - dogsled # Detect too many blank identifier assignments (_ = ...)
+    - goprintffuncname # Enforce *f suffix on Printf-style functions
+    - noctx # Require context.Context for HTTP requests (critical for tracing)
+    - predeclared # Warn on shadowing predeclared Go identifiers
+    - thelper # Enforce t.Helper() in test helpers
+
+    # --- Performance ---
+    - copyloopvar # Detect copying loop variables unnecessarily (Go 1.22+)
+
+# =============================================================================
+# Linter Settings
+# =============================================================================
+linters-settings:
+  # ---------------------------------------------------------------------------
+  # errcheck — unchecked errors
+  # ---------------------------------------------------------------------------
+  errcheck:
+    # Check type assertions too (aligns with context value extraction pattern)
+    check-type-assertions: true
+    # Don't require checking errors from these functions
+    exclude-functions:
+      - (io.Closer).Close
+      - (net/http.ResponseWriter).Write
+      - encoding/json.NewEncoder.Encode
+      - fmt.Fprintf
+      - fmt.Fprintln
+
+  # ---------------------------------------------------------------------------
+  # errorlint — enforce idiomatic error handling
+  # ---------------------------------------------------------------------------
+  errorlint:
+    # Require errors.Is() instead of == for sentinel errors
+    comparison: true
+    # Require errors.As() instead of type assertions
+    asserts: true
+    # Require %w verb for error wrapping
+    errorf: true
+    errorf-multi: true
+
+  # ---------------------------------------------------------------------------
+  # gocognit — cognitive complexity
+  # ---------------------------------------------------------------------------
+  gocognit:
+    # Allow moderate complexity for HTTP handlers that do validation + business logic
+    min-complexity: 30
+
+  # ---------------------------------------------------------------------------
+  # goconst — repeated string literals
+  # ---------------------------------------------------------------------------
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    ignore-tests: true
+
+  # ---------------------------------------------------------------------------
+  # gocritic — broad opinionated checks
+  # ---------------------------------------------------------------------------
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      # Allow unnamedResult — project uses named returns in some SAS/storage funcs
+      - unnamedResult
+      # Allow hugeParam — Azure SDK structs can be large
+      - hugeParam
+      # Allow elseif — sometimes clearer for auth handler chains
+      - elseif
+
+  # ---------------------------------------------------------------------------
+  # gofmt — formatting
+  # ---------------------------------------------------------------------------
+  gofmt:
+    simplify: true
+
+  # ---------------------------------------------------------------------------
+  # goimports — import grouping
+  # ---------------------------------------------------------------------------
+  goimports:
+    # Separate local imports from third-party (streamforge/ modules)
+    local-prefixes: streamforge/
+
+  # ---------------------------------------------------------------------------
+  # gosec — security checks
+  # ---------------------------------------------------------------------------
+  gosec:
+    excludes:
+      # G104: audit unhandled errors — covered by errcheck
+      - G104
+      # G304: file path from variable — needed for FFmpeg temp directory ops (transcoder)
+      - G304
+    config:
+      global:
+        audit: false
+
+  # ---------------------------------------------------------------------------
+  # govet — suspicious constructs
+  # ---------------------------------------------------------------------------
+  govet:
+    enable-all: true
+    disable:
+      # fieldalignment is too noisy for handler/model structs
+      - fieldalignment
+
+  # ---------------------------------------------------------------------------
+  # misspell — spelling
+  # ---------------------------------------------------------------------------
+  misspell:
+    locale: US
+
+  # ---------------------------------------------------------------------------
+  # nakedret — naked returns
+  # ---------------------------------------------------------------------------
+  nakedret:
+    # Disallow naked returns in functions longer than 5 lines
+    max-func-lines: 5
+
+  # ---------------------------------------------------------------------------
+  # revive — linting rules (golint successor)
+  # ---------------------------------------------------------------------------
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+      - name: if-return
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+        disabled: true # Not all internal packages need package comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: var-declaration
+      - name: var-naming
+
+  # ---------------------------------------------------------------------------
+  # staticcheck — advanced static analysis
+  # ---------------------------------------------------------------------------
+  staticcheck:
+    checks:
+      - all
+      # Disable deprecated function suggestions for now (some Azure SDK patterns)
+      - "-SA1019"
+
+  # ---------------------------------------------------------------------------
+  # unparam — unused parameters
+  # ---------------------------------------------------------------------------
+  unparam:
+    # Check exported functions too
+    check-exported: false
+
+  # ---------------------------------------------------------------------------
+  # wrapcheck — ensure external errors are wrapped
+  # ---------------------------------------------------------------------------
+  wrapcheck:
+    ignoreSigs:
+      - ".Errorf("
+      - "errors.New("
+      - "errors.Unwrap("
+      - "errors.Join("
+      - ".Wrap("
+      - ".Wrapf("
+      - ".WithMessage("
+      - ".WithMessagef("
+      - ".WithStack("
+    ignorePackageGlobs:
+      # Don't require wrapping errors from standard library
+      - encoding/json
+      - io
+      - os
+      - fmt
+
+  # ---------------------------------------------------------------------------
+  # whitespace
+  # ---------------------------------------------------------------------------
+  whitespace:
+    multi-if: false
+    multi-func: false
+
+# =============================================================================
+# Issue Settings
+# =============================================================================
+issues:
+  # Maximum issues per linter (0 = unlimited)
+  max-issues-per-linter: 0
+
+  # Maximum duplicate issues (0 = unlimited)
+  max-same-issues: 0
+
+  # Don't hide issues in vendor or generated code
+  exclude-use-default: false
+
+  # Exclude specific patterns
+  exclude-rules:
+    # Allow dot imports in test files (common for testing frameworks)
+    - path: _test\.go
+      linters:
+        - revive
+        - gocritic
+        - errcheck
+        - wrapcheck
+        - gosec
+        - gocognit
+        - unparam
+
+    # main.go files use log.Fatalf which doesn't return — allow unchecked errors
+    # in startup wiring
+    - path: cmd/.*/main\.go
+      linters:
+        - wrapcheck
+        - errcheck
+      text: "Fatalf"
+
+    # Allow using fmt.Errorf without %w in handlers for respondError messages
+    # (these are user-facing, not wrapped)
+    - path: internal/handlers/
+      linters:
+        - wrapcheck
+      text: "respondError"
+
+    # Allow globals in metrics package (Prometheus collectors are registered globally)
+    - path: internal/metrics/
+      linters:
+        - gocritic
+        - gochecknoglobals
+
+    # SQL migration files are not Go code
+    - path: migrations/
+      linters:
+        - errcheck
+        - gosec
+
+    # Models are struct-only files — allow unused fields that match DB schema
+    - path: internal/models/
+      linters:
+        - unused
+
+    # Allow shadowing 'err' — extremely common and idiomatic in Go
+    - linters:
+        - govet
+      text: 'shadow: declaration of "err" shadows'
+
+    # Azure SDK sometimes forces passing nil options — allow
+    - linters:
+        - staticcheck
+      text: "SA1012"
+
+    # Config loading uses os.Getenv extensively — don't flag as security issue
+    - path: internal/config/
+      linters:
+        - gosec
+      text: "G101"
+
+  # Fix found issues if possible (use with --fix flag)
+  fix: false
+
+# =============================================================================
+# Severity
+# =============================================================================
+severity:
+  default-severity: warning
+  case-sensitive: false
+  rules:
+    # Treat security issues as errors
+    - linters:
+        - gosec
+      severity: error
+    # Treat unchecked errors as errors
+    - linters:
+        - errcheck
+      severity: error
+    # Treat nil error returns as errors
+    - linters:
+        - nilerr
+      severity: error

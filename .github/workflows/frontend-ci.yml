@@ -1,18 +1,17 @@
+---
 name: Streamforge Frontend CI
 
 on:
   push:
     branches:
       - "main"
-      - "releases/**"
     paths:
-      - "./frontend/*"
+      - "./frontend/**"
   pull_request:
     branches:
       - "main"
-      - "releases/**"
     paths:
-      - "./frontend/*"
+      - "./frontend/**"
 
 env:
   REGISTRY: ghcr.io
@@ -50,10 +49,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/docker-build-push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           REGISTRY: ghcr.io
           IMAGE_NAME: ${{ github.repository }}
           ARTIFACT_NAME: frontend
           CONTEXT_PATH: ./frontend
           DOCKERFILE_NAME: Dockerfile
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

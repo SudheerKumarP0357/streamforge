@@ -1,22 +1,24 @@
+---
 name: Backend API CI
 
 on:
   push:
     branches:
       - "main"
-      - "releases/**"
     paths:
       - "backend/api/**"
   pull_request:
     branches:
       - "main"
-      - "releases/**"
     paths:
       - "backend/api/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/api
     steps:
       - uses: actions/checkout@v4
 
@@ -31,8 +33,6 @@ jobs:
 
       - name: Go Vet
         run: go vet ./...
-
-        working-directory: ./backend/api
 
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
