@@ -16,27 +16,33 @@ inputs:
   DOCKERFILE_NAME:
     description: "Docker filename with relative path"
     required: true
-  GITHUB_TOKEN:
-    description: "PAT token to push the images to registry"
-    required: true
+  BUILD_ARGS:
+    description: "Docker build arguments (newline separated)"
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v4
 
     - name: Docker Login
       uses: docker/login-action@v4.0.0
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ inputs.GITHUB_TOKEN }}
+        password: ${{ env.GITHUB_TOKEN }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
-      uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      uses: docker/metadata-action@v6.0.0
       with:
         images: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME }}/${{ inputs.ARTIFACT_NAME }}
+        tags: |
+          type=sha
+          type=ref,event=branch
+          type=raw,value=latest
 
     - name: Build and push Docker images
       uses: docker/build-push-action@v7.0.0
@@ -47,9 +53,15 @@ runs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
+        provenance: false
+        build-args: ${{ inputs.BUILD_ARGS }}
 
     - name: Generate artifact attestation
-      uses: actions/attest@v4
+      if: steps.push.outputs.digest != ''
+      uses: actions/attest-build-provenance@v4.1.0
       with:
         subject-name: ${{ inputs.REGISTRY }}/${{ inputs.IMAGE_NAME}}/${{ inputs.ARTIFACT_NAME }}
         subject-digest: ${{ steps.push.outputs.digest }}
