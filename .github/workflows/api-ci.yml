@@ -3,14 +3,16 @@ name: Backend API CI
 on:
   push:
     branches:
-      - "main"
+      - pipelines
+      # - "main"
+
     paths:
-      - "backend/api/**"
-  pull_request:
-    branches:
-      - "main"
-    paths:
-      - "backend/api/**"
+      # - "backend/api/**"
+  # pull_request:
+  #   branches:
+  #     # - "main"
+  #   paths:
+  #     # - "backend/api/**"
 
 jobs:
   build:
