@@ -6,13 +6,13 @@ on:
       - "main"
       - "releases/**"
     paths:
-      - "./backend/api/*"
+      - "backend/api/**"
   pull_request:
     branches:
       - "main"
       - "releases/**"
     paths:
-      - "./backend/api/*"
+      - "backend/api/**"
 
 jobs:
   build:
@@ -24,12 +24,18 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.24.0"
+          cache-dependency-path: backend/api/go.sum
 
       - name: Build API
-        run: go build -v ./cmd/server/main.go
+        run: go build -mod=readonly -v ./...
+
+      - name: Go Vet
+        run: go vet ./...
+
         working-directory: ./backend/api
 
   docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: build
     permissions:
@@ -41,6 +47,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/docker-build-push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         name: Docker Build & Push
         with:
           REGISTRY: ghcr.io
@@ -48,4 +56,3 @@ jobs:
           ARTIFACT_NAME: api
           CONTEXT_PATH: ./backend/api
           DOCKERFILE_NAME: Dockerfile
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
