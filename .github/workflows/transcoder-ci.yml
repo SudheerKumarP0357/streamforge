@@ -2,6 +2,7 @@
 name: Backend Transcoder CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "main"
