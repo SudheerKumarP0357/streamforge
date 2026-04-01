@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json.schemastore.org/eslintrc",
+  "root": true,
+
+  // ---------------------------------------------------------------------------
+  // Base: Next.js recommended + TypeScript + React Hooks
+  // ---------------------------------------------------------------------------
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:react/recommended",
+    "plugin:react/jsx-runtime",
+    "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript",
+    "next/core-web-vitals"
+  ],
+
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "project": "./tsconfig.json",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "jsx-a11y",
+    "import"
+  ],
+
+  "settings": {
+    "react": {
+      "version": "detect"
+    },
+    "import/resolver": {
+      "typescript": {
+        "project": "./tsconfig.json"
+      },
+      "node": {
+        "extensions": [".ts", ".tsx", ".js", ".jsx"]
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Global Rules
+  // ---------------------------------------------------------------------------
+  "rules": {
+    // ── TypeScript Strict Mode ───────────────────────────────────────────────
+    // Project convention: No `any` types. No `@ts-ignore`. (GEMINI.md)
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/ban-ts-comment": ["error", {
+      "ts-expect-error": "allow-with-description",
+      "ts-ignore": true,
+      "ts-nocheck": true,
+      "minimumDescriptionLength": 10
+    }],
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_",
+      "destructuredArrayIgnorePattern": "^_"
+    }],
+    "@typescript-eslint/consistent-type-imports": ["warn", {
+      "prefer": "type-imports",
+      "fixStyle": "separate-type-imports"
+    }],
+    "@typescript-eslint/no-non-null-assertion": "warn",
+
+    // Allow async server component functions (Next.js App Router pattern)
+    "@typescript-eslint/require-await": "off",
+    // Reduce noise from mismatched promises in event handlers and fire-and-forget patterns
+    "@typescript-eslint/no-floating-promises": ["warn", {
+      "ignoreVoid": true,
+      "ignoreIIFE": true
+    }],
+    "@typescript-eslint/no-misused-promises": ["error", {
+      "checksVoidReturn": {
+        "attributes": false
+      }
+    }],
+    // Allow empty catch blocks (used in cookie/server-side fallbacks)
+    "@typescript-eslint/no-empty-function": "off",
+    // Unsafe member access/call — warn instead of error (Video.js tech casting)
+    "@typescript-eslint/no-unsafe-member-access": "warn",
+    "@typescript-eslint/no-unsafe-call": "warn",
+    "@typescript-eslint/no-unsafe-assignment": "warn",
+    "@typescript-eslint/no-unsafe-argument": "warn",
+    "@typescript-eslint/no-unsafe-return": "warn",
+
+    // ── React & Hooks ────────────────────────────────────────────────────────
+    "react/prop-types": "off",
+    "react/display-name": "off",
+    "react/no-unescaped-entities": "warn",
+    // Hooks rules — critical for useEffect side-effect correctness
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    // Self-closing components
+    "react/self-closing-comp": ["warn", {
+      "component": true,
+      "html": true
+    }],
+    // No children in void elements
+    "react/void-dom-elements-no-children": "error",
+
+    // ── Accessibility ────────────────────────────────────────────────────────
+    // Reduce noise for the video player and custom media components
+    "jsx-a11y/media-has-caption": "off",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+
+    // ── Import Ordering ──────────────────────────────────────────────────────
+    "import/order": ["warn", {
+      "groups": [
+        "builtin",
+        "external",
+        "internal",
+        ["parent", "sibling"],
+        "index",
+        "type"
+      ],
+      "pathGroups": [
+        {
+          "pattern": "react",
+          "group": "external",
+          "position": "before"
+        },
+        {
+          "pattern": "next/**",
+          "group": "external",
+          "position": "before"
+        },
+        {
+          "pattern": "@/**",
+          "group": "internal",
+          "position": "before"
+        }
+      ],
+      "pathGroupsExcludedImportTypes": ["react", "next"],
+      "newlines-between": "never",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
+    "import/no-duplicates": "warn",
+    "import/no-cycle": ["warn", { "maxDepth": 3 }],
+    "import/no-unresolved": "off",
+
+    // ── General Code Quality ─────────────────────────────────────────────────
+    "no-console": ["warn", {
+      "allow": ["warn", "error", "info"]
+    }],
+    "no-debugger": "error",
+    "no-alert": "error",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "prefer-template": "warn",
+    "no-nested-ternary": "warn",
+    "no-duplicate-imports": "off",
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "curly": ["warn", "multi-line"],
+    "no-throw-literal": "error",
+    "no-return-await": "off",
+    "@typescript-eslint/return-await": ["warn", "in-try-catch"],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "TSTypeReference[typeName.name='any']",
+        "message": "Avoid using `any`. Use `unknown` or a specific type instead (GEMINI.md convention)."
+      }
+    ],
+
+    // ── Next.js Specific ─────────────────────────────────────────────────────
+    "@next/next/no-img-element": "warn",
+    "@next/next/no-html-link-for-pages": "error"
+  },
+
+  // ---------------------------------------------------------------------------
+  // Overrides — context-specific relaxations
+  // ---------------------------------------------------------------------------
+  "overrides": [
+    // ── Server Components / Pages (app/ directory, no 'use client') ──────────
+    {
+      "files": ["app/**/page.tsx", "app/**/layout.tsx", "app/**/loading.tsx", "app/**/error.tsx", "app/**/not-found.tsx"],
+      "rules": {
+        // Server components are async — don't warn about floating promises
+        "@typescript-eslint/no-floating-promises": "off",
+        // Server components can use `await` at top level
+        "no-restricted-syntax": "off"
+      }
+    },
+
+    // ── Client Components (components/ directory) ────────────────────────────
+    {
+      "files": ["components/**/*.tsx", "components/**/*.ts"],
+      "rules": {
+        // Video.js requires `any` casting for tech access
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-unsafe-member-access": "warn"
+      }
+    },
+
+    // ── Middleware (Edge runtime) ────────────────────────────────────────────
+    {
+      "files": ["middleware.ts"],
+      "rules": {
+        // Middleware uses console for logging in Edge runtime
+        "no-console": "off"
+      }
+    },
+
+    // ── API Routes / Server Actions ──────────────────────────────────────────
+    {
+      "files": ["app/api/**/*.ts", "app/actions/**/*.ts"],
+      "rules": {
+        "no-console": "off",
+        "@typescript-eslint/no-floating-promises": "off"
+      }
+    },
+
+    // ── Lib utilities ────────────────────────────────────────────────────────
+    {
+      "files": ["lib/**/*.ts"],
+      "rules": {
+        // API client uses `any` for error catching and dynamic require
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-var-requires": "warn",
+        // Allow console in logger utility
+        "no-console": "off"
+      }
+    },
+
+    // ── Config files (JS, not TypeScript) ────────────────────────────────────
+    {
+      "files": ["*.config.js", "*.config.ts", "tailwind.config.ts", "next.config.js", "postcss.config.js"],
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off",
+        "import/no-anonymous-default-export": "off",
+        "no-console": "off"
+      },
+      "parserOptions": {
+        "project": null
+      }
+    }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Ignore Patterns
+  // ---------------------------------------------------------------------------
+  "ignorePatterns": [
+    "node_modules/",
+    "build/",
+    ".next/",
+    "out/",
+    "public/",
+    "*.config.js",
+    "next-env.d.ts"
+  ]
+}

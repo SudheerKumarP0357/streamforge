@@ -3,16 +3,14 @@ name: Backend API CI
 on:
   push:
     branches:
-      - pipelines
-      # - "main"
-
+      - "main"
     paths:
-      # - "backend/api/**"
-  # pull_request:
-  #   branches:
-  #     # - "main"
-  #   paths:
-  #     # - "backend/api/**"
+      - "backend/api/**"
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "backend/api/**"
 
 jobs:
   build:
@@ -31,11 +29,9 @@ jobs:
 
       - name: Build API
         run: go build -mod=readonly -v ./...
-        working-directory: ./backend/api
 
       - name: Go Vet
         run: go vet ./...
-        working-directory: ./backend/api
 
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
