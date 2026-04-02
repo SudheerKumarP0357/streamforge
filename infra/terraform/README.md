@@ -7,5 +7,5 @@
 - [x] Cosmos Mongo database Cluster
 - [x] Azure Managed Redis
 - [x] Key Vault
-- [ ] Postgres database
-- [ ] Azure Kubernetes Service
+- [x] Postgres database
+- [x] Azure Kubernetes Service
