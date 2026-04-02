@@ -117,8 +117,8 @@ jobs:
               '| Init | `${{ steps.init.outcome }}` |',
               '| Validate | `${{ steps.validate.outcome }}` |',
               '| Plan | `${{ steps.plan.outcome }}` |',
-              '|Upload|`%{{ steps.upload.outcome }}`|',
-              '|Artifact URL|`%{{ steps.upload.outcome.artifact-url }}`|',
+              '|Upload|`${{ steps.upload.outcome }}`|',
+              '|Artifact URL|`${{ steps.upload.outcome.artifact-url }}`|',
               '',
               '*Pushed by @${{ github.actor }}, Action: `${{ github.event_name }}`*',
             ].join('\n');
