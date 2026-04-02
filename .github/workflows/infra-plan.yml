@@ -31,18 +31,23 @@ jobs:
     steps:
       - id: branch-check
         run: |
-          # Get the branch name regardless of trigger type
-          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          echo $BRANCH_NAME
-          echo "Base Branch Name: ${{ github.base_ref }}"
-          echo "Base Branch Name: ${{ github.head_ref }}"
-          
-          if [[ "$BRANCH_NAME" == "infra/production" ]]; then
-            echo "env_name=production" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH_NAME" == "infra/development" ]]; then
-            echo "env_name=development" >> $GITHUB_OUTPUT
+          # If it's a PR, use base_ref (the target). If not, use the current branch name.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TARGET_BRANCH="${{ github.base_ref }}"
           else
-            echo "env_name=development" >> $GITHUB_OUTPUT # Default safety
+            TARGET_BRANCH="${{ github.ref_name }}"
+          fi
+          echo $TARGET_BRANCH
+          if [[ "$TARGET_BRANCH" == "infra/production" ]]; then
+            echo "Environment is production"
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          elif [[ "$TARGET_BRANCH" == "infra/development" ]]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
+            echo "Environment is development"
+          else
+            # Default to development for safety to prevent accidental Prod changes
+            echo "env_name=development" >> $GITHUB_OUTPUT
+            echo "Environment is development"
           fi
 
   terraform-plan:
