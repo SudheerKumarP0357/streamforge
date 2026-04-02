@@ -24,6 +24,24 @@ permissions:
   id-token: write
 
 jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.branch-check.outputs.env_name }}
+    steps:
+      - id: branch-check
+        run: |
+          # Get the branch name regardless of trigger type
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          
+          if [[ "$BRANCH_NAME" == "infra/production" ]]; then
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH_NAME" == "infra/development" ]]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=development" >> $GITHUB_OUTPUT # Default safety
+          fi
+
   terraform-plan:
     # if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -32,7 +50,9 @@ jobs:
 
     name: Terraform Plan
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'pull_request' && (github.head_ref == 'infra/development' && 'development' || github.head_ref == 'infra/production' && 'production') || (github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production') }}
+    needs: [set-env]
+    environment: ${{ needs.set-env.outputs.env_name }}
+    # environment: ${{ github.event_name == 'pull_request' && (github.head_ref == 'infra/development' && 'development' || github.head_ref == 'infra/production' && 'production') || (github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
