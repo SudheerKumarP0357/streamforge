@@ -13,17 +13,19 @@ on:
       - infra/terraform/**
 env:
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
 
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   terraform-plan:
-    if: github.event_name == 'pull_request' || github.event_name == ''
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./infra/terraform
@@ -40,7 +42,7 @@ jobs:
       - name: Terrafom format
         id: fmt
         run: terraform fmt -check
-        continue-on-error: true
+        # continue-on-error: true
 
       - name: Terraform Init
         id: init
@@ -50,35 +52,36 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
           -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
           -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
-        continue-on-error: true
+        # continue-on-error: true
 
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        continue-on-error: true
+        # continue-on-error: true
 
       - name: Terraform Security Checks
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           soft_fail: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: ./infra/terraform
 
       - name: Terraform Plan
         id: plan
-        continue-on-error: true
+        # continue-on-error: true
         run: terraform plan -no-color -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
         uses: actions/upload-artifact@v4
         id: upload
-        continue-on-error: true
+        # continue-on-error: true
         with:
           name: streamforge-tfplan
           path: infra/terraform/main.tfplan
 
       - name: Update PR with Plan
         uses: actions/github-script@v8
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -117,7 +120,8 @@ jobs:
               '| Init | `${{ steps.init.outcome }}` |',
               '| Validate | `${{ steps.validate.outcome }}` |',
               '| Plan | `${{ steps.plan.outcome }}` |',
-              '|Upload|`%{{ steps.upload.outcome}}`|',
+              '|Upload|`${{ steps.upload.outcome }}`|',
+              '|Artifact URL|`${{ steps.upload.outputs.artifact-url }}`|',
               '',
               '*Pushed by @${{ github.actor }}, Action: `${{ github.event_name }}`*',
             ].join('\n');

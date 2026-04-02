@@ -124,5 +124,6 @@ variable "aks_max_system_pool_node_count" {
 }
 
 variable "aks_systempool_max_pods_per_node" {
-  type = number
+  type        = number
+  description = "Maximum no of pods per node"
 }
