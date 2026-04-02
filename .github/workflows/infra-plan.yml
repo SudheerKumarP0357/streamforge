@@ -33,6 +33,7 @@ jobs:
         run: |
           # Get the branch name regardless of trigger type
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          echo $BRANCH_NAME
           
           if [[ "$BRANCH_NAME" == "infra/production" ]]; then
             echo "env_name=production" >> $GITHUB_OUTPUT
