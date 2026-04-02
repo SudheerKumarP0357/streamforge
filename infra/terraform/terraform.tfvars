@@ -1,5 +1,5 @@
 application_name            = "streamforge"
-environment_name            = "dev"
+environment_name            = "test"
 primary_location            = "centralindia"
 primary_location_short_name = "ci"
 vnet_app_addr_space         = "10.10.0.0/16"
