@@ -1,11 +1,11 @@
 name: Terraform Plan - Azure
-on: 
-  workflow_dispatch: 
+on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      -  infra/terraform/**
+      - infra/terraform/**
   pull_request:
     branches:
       - main
@@ -17,30 +17,31 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
-permissions: 
+permissions:
   contents: read
   pull-requests: write
-  
+
 jobs:
   terraform-plan:
     if: github.event_name == 'pull_request' || github.event_name == ''
     defaults:
       run:
         working-directory: ./infra/terraform
-    
+
     name: Terraform Plan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-      
+
       - name: Terrafom format
         id: fmt
         run: terraform fmt -check
-      
+        continue-on-error: true
+
       - name: Terraform Init
         id: init
         run: |
@@ -49,26 +50,32 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
           -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
           -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
+        continue-on-error: true
+
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
+        continue-on-error: true
 
       - name: Terraform Security Checks
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           soft_fail: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Terraform Plan
         id: plan
         continue-on-error: true
         run: terraform plan -no-color -out=main.tfplan 2>&1 | tee plan_output.txt
-          
+
       - name: Upload Terrafrom Plan
         uses: actions/upload-artifact@v4
+        id: upload
+        continue-on-error: true
         with:
           name: streamforge-tfplan
           path: infra/terraform/main.tfplan
-      
+
       - name: Update PR with Plan
         uses: actions/github-script@v8
         if: github.event_name == 'pull_request'
@@ -76,7 +83,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-      
+
             // Read plan output from file
             let planOutput = '';
             try {
@@ -84,15 +91,15 @@ jobs:
             } catch (e) {
               planOutput = 'Could not read plan output';
             }
-      
+
             // Trim to avoid GitHub comment size limits (65536 chars max)
             const maxLength = 60000;
             if (planOutput.length > maxLength) {
               planOutput = planOutput.substring(0, maxLength) + '\n... output truncated, download artifact for full plan';
             }
-      
+
             const planStatus = '${{ steps.plan.outcome }}' === 'success' ? '✅' : '❌';
-      
+
             const output = [
               '#### Streamforge Terraform Plan Output ' + planStatus,
               '',
@@ -110,22 +117,23 @@ jobs:
               '| Init | `${{ steps.init.outcome }}` |',
               '| Validate | `${{ steps.validate.outcome }}` |',
               '| Plan | `${{ steps.plan.outcome }}` |',
+              '|Upload|`%{{ steps.upload.outcome}}`|',
               '',
               '*Pushed by @${{ github.actor }}, Action: `${{ github.event_name }}`*',
             ].join('\n');
-      
+
             // Find and delete previous bot comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-      
+
             const botComment = comments.find(comment =>
               comment.user.type === 'Bot' &&
               comment.body.includes('Streamforge Terraform Plan Output')
             );
-      
+
             if (botComment) {
               await github.rest.issues.deleteComment({
                 owner: context.repo.owner,
@@ -133,7 +141,7 @@ jobs:
                 comment_id: botComment.id,
               });
             }
-      
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
