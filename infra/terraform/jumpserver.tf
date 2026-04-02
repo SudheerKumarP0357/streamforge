@@ -54,6 +54,12 @@ data "template_file" "cloud_init_config" {
   template = file("${path.module}/cloud-init.yml")
 }
 
+resource "tls_private_key" "jump_server_ssh_keys" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+
 resource "azurerm_linux_virtual_machine" "jump_server" {
   name                = "jumphost"
   resource_group_name = azurerm_resource_group.main.name
@@ -74,7 +80,7 @@ resource "azurerm_linux_virtual_machine" "jump_server" {
 
   admin_ssh_key {
     username   = "adminuser"
-    public_key = file("~/.ssh/id_ed25519.pub")
+    public_key = tls_private_key.jump_server_ssh_keys.public_key_openssh
   }
 
   os_disk {
