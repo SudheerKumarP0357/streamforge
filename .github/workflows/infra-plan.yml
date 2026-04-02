@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - infra/**
     paths:
       - infra/terraform/**
   pull_request:
     branches:
-      - main
+      - infra/**
     paths:
       - infra/terraform/**
 env:
@@ -25,13 +25,14 @@ permissions:
 
 jobs:
   terraform-plan:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./infra/terraform
 
     name: Terraform Plan
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && (github.head_ref == 'infra/development' && 'development' || github.head_ref == 'infra/production' && 'production') || (github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +43,6 @@ jobs:
       - name: Terrafom format
         id: fmt
         run: terraform fmt -check
-        # continue-on-error: true
 
       - name: Terraform Init
         id: init
@@ -52,12 +52,10 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
           -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
           -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
-        # continue-on-error: true
 
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        # continue-on-error: true
 
       - name: Terraform Security Checks
         uses: aquasecurity/tfsec-action@v1.0.3
@@ -68,13 +66,11 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        # continue-on-error: true
         run: terraform plan -no-color -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
         uses: actions/upload-artifact@v4
         id: upload
-        # continue-on-error: true
         with:
           name: streamforge-tfplan
           path: infra/terraform/main.tfplan
@@ -152,3 +148,47 @@ jobs:
               repo: context.repo.repo,
               body: output,
             });
+ 
+  terraform-apply:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/infra/')
+    needs: terraform-plan
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production' || 'development' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+          -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
+
+      - name: Download Terraform Plan Artifact
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          name: streamforge-tfplan
+          path: infra/terraform
+
+      - name: Verify Plan File
+        run: |
+          if [ ! -f "main.tfplan" ]; then
+            echo "Plan file not found"
+            exit 1
+          fi
+      
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply --auto-approve main.tfplan
