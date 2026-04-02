@@ -1,0 +1,142 @@
+name: Terraform Plan - Azure
+on: 
+  workflow_dispatch: 
+  push:
+    branches:
+      - main
+    paths:
+      -  infra/terraform/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - infra/terraform/**
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+permissions: 
+  contents: read
+  pull-requests: write
+  
+jobs:
+  terraform-plan:
+    if: github.event_name == 'pull_request' || github.event_name == ''
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      
+      - name: Terrafom format
+        id: fmt
+        run: terraform fmt -check
+      
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+          -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Security Checks
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          soft_fail: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Terraform Plan
+        id: plan
+        continue-on-error: true
+        run: terraform plan -no-color -out=main.tfplan 2>&1 | tee plan_output.txt
+          
+      - name: Upload Terrafrom Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamforge-tfplan
+          path: infra/terraform/main.tfplan
+      
+      - name: Update PR with Plan
+        uses: actions/github-script@v8
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+      
+            // Read plan output from file
+            let planOutput = '';
+            try {
+              planOutput = fs.readFileSync('infra/terraform/plan_output.txt', 'utf8');
+            } catch (e) {
+              planOutput = 'Could not read plan output';
+            }
+      
+            // Trim to avoid GitHub comment size limits (65536 chars max)
+            const maxLength = 60000;
+            if (planOutput.length > maxLength) {
+              planOutput = planOutput.substring(0, maxLength) + '\n... output truncated, download artifact for full plan';
+            }
+      
+            const planStatus = '${{ steps.plan.outcome }}' === 'success' ? '✅' : '❌';
+      
+            const output = [
+              '#### Streamforge Terraform Plan Output ' + planStatus,
+              '',
+              '<details><summary>Show Plan</summary>',
+              '',
+              '```terraform',
+              planOutput,
+              '```',
+              '',
+              '</details>',
+              '',
+              '| Step | Result |',
+              '|------|--------|',
+              '| Format | `${{ steps.fmt.outcome }}` |',
+              '| Init | `${{ steps.init.outcome }}` |',
+              '| Validate | `${{ steps.validate.outcome }}` |',
+              '| Plan | `${{ steps.plan.outcome }}` |',
+              '',
+              '*Pushed by @${{ github.actor }}, Action: `${{ github.event_name }}`*',
+            ].join('\n');
+      
+            // Find and delete previous bot comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+      
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Streamforge Terraform Plan Output')
+            );
+      
+            if (botComment) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+              });
+            }
+      
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output,
+            });
