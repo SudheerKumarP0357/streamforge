@@ -13,17 +13,18 @@ on:
       - infra/terraform/**
 env:
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  # ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   terraform-plan:
-    if: github.event_name == 'pull_request' || github.event_name == ''
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./infra/terraform
@@ -62,6 +63,7 @@ jobs:
         with:
           soft_fail: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: ./infra/terraform
 
       - name: Terraform Plan
         id: plan
@@ -118,7 +120,7 @@ jobs:
               '| Validate | `${{ steps.validate.outcome }}` |',
               '| Plan | `${{ steps.plan.outcome }}` |',
               '|Upload|`${{ steps.upload.outcome }}`|',
-              '|Artifact URL|`${{ steps.upload.outcome.artifact-url }}`|',
+              '|Artifact URL|`${{ steps.upload.outputs.artifact-url }}`|',
               '',
               '*Pushed by @${{ github.actor }}, Action: `${{ github.event_name }}`*',
             ].join('\n');
