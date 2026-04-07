@@ -224,11 +224,4 @@ jobs:
       - name: Terraform Apply
         id: apply
         # We specify the exact file downloaded from the artifact
-        run: |
-          terraform apply \
-          -no-color \
-          -var="postgres_administrator_password=${{secrets.POSTGRES_PASSWORD}}" \
-          -var="cosmos_administrator_password=${{secrets.COSMOS_PASSWORD}}" \
-          -var="jwt_secret=${{secrets.JWT_SECRET}}" \
-          -var="rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" \
-          -auto-approve main.tfplan
+        run: terraform apply -auto-approve main.tfplan
