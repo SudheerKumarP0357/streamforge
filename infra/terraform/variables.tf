@@ -127,3 +127,7 @@ variable "aks_systempool_max_pods_per_node" {
   type        = number
   description = "Maximum no of pods per node"
 }
+
+variable "kubectl_version" {
+  type = string
+}

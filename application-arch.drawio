@@ -1,0 +1,34 @@
+<mxfile host="65bd71144e">
+    <diagram id="2sIJAMRtvY8TUUvaqNLv" name="Page-1">
+        <mxGraphModel dx="1626" dy="779" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="4" value="" style="edgeStyle=none;html=1;" edge="1" parent="1" source="2" target="3">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="Users" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=#232F3E;fillColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.users;" vertex="1" parent="1">
+                    <mxGeometry x="320" y="345" width="50" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="&lt;div&gt;&lt;b&gt;Nextjs - Frontend&lt;/b&gt;&lt;br&gt;AKS Frontend Pods&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffffff;strokeColor=#232F3E;fontColor=#232F3E;sketch=0;gradientColor=none;dashed=0;fontStyle=0;" vertex="1" parent="1">
+                    <mxGeometry x="510" y="335" width="90" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="1.&amp;nbsp;Users uploads video" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="360" y="340" width="150" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="&lt;b&gt;Go API&lt;/b&gt;&lt;br&gt;AKS API Pods" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffffff;strokeColor=#232F3E;fontColor=#232F3E;sketch=0;gradientColor=none;dashed=0;fontStyle=0;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="335" width="70" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="&lt;div&gt;&lt;b&gt;Nextjs - Frontend&lt;/b&gt;&lt;br&gt;AKS Frontend Pods&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffffff;strokeColor=#232F3E;fontColor=#232F3E;sketch=0;gradientColor=none;dashed=0;fontStyle=0;" vertex="1" parent="1">
+                    <mxGeometry x="660" y="450" width="90" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="&lt;div&gt;&lt;b&gt;Nextjs - Frontend&lt;/b&gt;&lt;br&gt;AKS Frontend Pods&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffffff;strokeColor=#232F3E;fontColor=#232F3E;sketch=0;gradientColor=none;dashed=0;fontStyle=0;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="210" width="90" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="&lt;div&gt;&lt;b&gt;Nextjs - Frontend&lt;/b&gt;&lt;br&gt;AKS Frontend Pods&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffffff;strokeColor=#232F3E;fontColor=#232F3E;sketch=0;gradientColor=none;dashed=0;fontStyle=0;" vertex="1" parent="1">
+                    <mxGeometry x="830" y="335" width="90" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -2,7 +2,7 @@ output "resource_group_name" {
   value = azurerm_resource_group.main.name
 }
 
-output "stroage_account_name" {
+output "storage_account_name" {
   value = azurerm_storage_account.main.name
 }
 
@@ -70,7 +70,7 @@ output "acr_password" {
   sensitive = true
 }
 
-output "aks_cluser_name" {
+output "aks_cluster_name" {
   value = azurerm_kubernetes_cluster.main.name
 }
 
@@ -84,4 +84,29 @@ output "jump_server_pip" {
 
 output "jump_server_user_name" {
   value = azurerm_linux_virtual_machine.jump_server.admin_username
+}
+
+output "rabbitmq_default_user" {
+  value = var.rabbitmq_default_user
+}
+
+output "key_vault_name" {
+  value = azurerm_key_vault.main.name
+}
+output "key_vault_workload_identity_client_id" {
+  value = azurerm_user_assigned_identity.streamforge_workload_identity.client_id
+}
+
+output "rabbitmq_url" {
+  value     = "amqp://${var.rabbitmq_default_user}:${var.rabbitmq_default_pass}@sf-rabbitmq-svc:5672/"
+  sensitive = true
+}
+
+output "jwt_secret" {
+  value     = var.jwt_secret
+  sensitive = true
+}
+
+output "azure-alb-identity" {
+  value = azurerm_user_assigned_identity.alb_uami.client_id
 }
