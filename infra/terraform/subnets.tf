@@ -68,6 +68,23 @@ resource "azurerm_subnet" "aks_subnet" {
   default_outbound_access_enabled = false
 }
 
+resource "azurerm_subnet" "alb_subnet" {
+  name                            = "alb-subnet"
+  resource_group_name             = azurerm_resource_group.main.name
+  virtual_network_name            = azurerm_virtual_network.app_vnet.name
+  address_prefixes                = ["10.10.17.0/24"]
+  default_outbound_access_enabled = false
+
+  delegation {
+    name = "agfc-delegation"
+    service_delegation {
+      name = "Microsoft.ServiceNetworking/trafficControllers"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action"
+      ]
+    }
+  }
+}
 
 
 # ===============================================================

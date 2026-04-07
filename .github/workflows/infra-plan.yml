@@ -1,14 +1,14 @@
-name: Terraform Plan - Azure
+name: Terraform - Azure
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - infra/**
     paths:
       - infra/terraform/**
   pull_request:
     branches:
-      - main
+      - infra/**
     paths:
       - infra/terraform/**
 env:
@@ -24,14 +24,42 @@ permissions:
   id-token: write
 
 jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.branch-check.outputs.env_name }}
+    steps:
+      - id: branch-check
+        run: |
+          # If it's a PR, use base_ref (the target). If not, use the current branch name.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TARGET_BRANCH="${{ github.base_ref }}"
+          else
+            TARGET_BRANCH="${{ github.ref_name }}"
+          fi
+          echo $TARGET_BRANCH
+          if [[ "$TARGET_BRANCH" == "infra/production" ]]; then
+            echo "Environment is production"
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          elif [[ "$TARGET_BRANCH" == "infra/development" ]]; then
+            echo "env_name=development" >> $GITHUB_OUTPUT
+            echo "Environment is development"
+          else
+            # Default to development for safety to prevent accidental Prod changes
+            echo "env_name=development" >> $GITHUB_OUTPUT
+            echo "Environment is development"
+          fi
+
   terraform-plan:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./infra/terraform
 
-    name: Terraform Plan
     runs-on: ubuntu-latest
+    needs: [set-env]
+    environment: ${{ needs.set-env.outputs.env_name }}
+    # environment: ${{ github.event_name == 'pull_request' && (github.head_ref == 'infra/development' && 'development' || github.head_ref == 'infra/production' && 'production') || (github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,7 +97,14 @@ jobs:
       - name: Terraform Plan
         id: plan
         # continue-on-error: true
-        run: terraform plan -no-color -out=main.tfplan 2>&1 | tee plan_output.txt
+        run: |
+          terraform plan \
+            -no-color \
+            -var="postgres_administrator_password=${{secrets.POSTGRES_PASSWORD}}" \
+            -var="cosmos_administrator_password=${{secrets.COSMOS_PASSWORD}}" \
+            -var="jwt_secret=${{secrets.JWT_SECRET}}" \
+            -var="rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" \
+            -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
         uses: actions/upload-artifact@v4
@@ -152,3 +187,41 @@ jobs:
               repo: context.repo.repo,
               body: output,
             });
+ 
+  terraform-apply:
+    # Only apply on pushes to the infra branches (post-merge)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/infra/development' || github.ref == 'refs/heads/infra/production')
+    needs: [set-env, terraform-plan]
+    environment: ${{ needs.set-env.outputs.env_name }}
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+          -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: streamforge-tfplan
+          # We download it directly into the working directory
+          path: ./infra/terraform
+
+      - name: Terraform Apply
+        id: apply
+        # We specify the exact file downloaded from the artifact
+        run: terraform apply -auto-approve main.tfplan

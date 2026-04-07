@@ -34,15 +34,16 @@ key_vault_admin_object_id = "71585d88-7d50-4edc-b591-52f60aa5de92"
 acr_sku = "Basic"
 
 # AKS
-aks_kubernetes_version           = "1.33.7"
+aks_kubernetes_version           = "1.35.0"
 aks_sku_tier                     = "Free"
 aks_max_system_pool_node_count   = 1
 aks_min_system_pool_node_count   = 1
 aks_systempool_max_pods_per_node = 250
+kubectl_version                  = "1.35"
 
 
-rabbitmq_default_pass           = "Streamforge0357"
-postgres_administrator_password = "Password0357"
-cosmos_administrator_password   = "Password0357"
-# JWT secret
-jwt_secret = "super-secret-for-streamforge-app"
+# rabbitmq_default_pass           = "Streamforge0357"
+# postgres_administrator_password = "Password0357"
+# cosmos_administrator_password   = "Password0357"
+# # JWT secret
+# jwt_secret = "super-secret-for-streamforge-app"

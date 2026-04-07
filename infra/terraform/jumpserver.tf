@@ -67,7 +67,11 @@ resource "azurerm_linux_virtual_machine" "jump_server" {
   size                = "Standard_B1ms"
   admin_username      = "adminuser"
 
-  custom_data = base64encode(data.template_file.cloud_init_config.rendered)
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.yml", {
+    aks_cluster_name    = "${var.application_name}${var.environment_name}${var.primary_location_short_name}"
+    resource_group_name = azurerm_resource_group.main.name
+    kubectl_version     = var.kubectl_version
+  }))
 
   network_interface_ids = [
     azurerm_network_interface.jump_server.id,
