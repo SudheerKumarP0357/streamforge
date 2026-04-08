@@ -180,7 +180,7 @@ jobs:
 
   terraform-apply:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [terraform-plan]
+    needs: [manual-approval, terraform-plan]
     runs-on: ubuntu-latest
     defaults:
       run:
