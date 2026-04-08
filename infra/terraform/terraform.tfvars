@@ -42,10 +42,8 @@ aks_systempool_max_pods_per_node = 250
 kubectl_version                  = "1.35"
 
 
-rabbitmq_default_pass           = "Streamforge0357"
-postgres_administrator_password = "Password0357"
-cosmos_administrator_password   = "Password0357"
-# JWT secret
-jwt_secret = "super-secret-for-streamforge-app"
-
-public_key_openssh = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1UWZua5Cx8YwmP4w/JszZPnY9Z6t+wGTpmLBX3fZT/ sudheer@streamline424"
+# rabbitmq_default_pass           = "Streamforge0357"
+# postgres_administrator_password = "Password0357"
+# cosmos_administrator_password   = "Password0357"
+# # JWT secret
+# jwt_secret = "super-secret-for-streamforge-app"
