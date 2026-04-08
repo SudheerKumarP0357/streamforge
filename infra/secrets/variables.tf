@@ -10,12 +10,14 @@ variable "key_vault_name" {
   type = string
 }
 
-variable "postgresql_flexible_server_name" {
-  type = string
+variable "postgres_administrator_password" {
+  type      = string
+  sensitive = true
 }
 
-variable "cosmos_administrator_username" {
-  type = string
+variable "cosmos_cluster_connection_string" {
+  type      = string
+  sensitive = true
 }
 
 variable "redis_name" {
@@ -31,9 +33,5 @@ variable "rabbitmq_default_pass" {
 }
 
 variable "rabbitmq_default_user" {
-  type = string
-}
-
-variable "rabbitmq_url" {
   type = string
 }

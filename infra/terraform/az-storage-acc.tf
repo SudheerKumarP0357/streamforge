@@ -5,10 +5,14 @@ resource "azurerm_storage_account" "main" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
-  account_kind   = "StorageV2"
-  is_hns_enabled = true
+  account_kind               = "StorageV2"
+  is_hns_enabled             = true
+  https_traffic_only_enabled = true
+  min_tls_version            = "TLS1_2"
 
-  public_network_access_enabled = false
+  allow_nested_items_to_be_public = false
+  public_network_access_enabled   = false
+  local_user_enabled              = false
 
   blob_properties {
 
@@ -39,7 +43,7 @@ resource "azurerm_storage_container" "hls_videos" {
 
 
 module "blob" {
-  source                = "./private-endpoint"
+  source                = "./modules/private-endpoint"
   resource_group_name   = azurerm_resource_group.main.name
   location              = azurerm_resource_group.main.location
   subnet_id             = azurerm_subnet.storage_account_subnet.id

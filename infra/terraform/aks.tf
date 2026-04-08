@@ -21,17 +21,19 @@ resource "azurerm_kubernetes_cluster" "main" {
   local_account_disabled              = false
 
   private_dns_zone_id = azurerm_private_dns_zone.aks.id
+
   default_node_pool {
-    auto_scaling_enabled = true
-    min_count            = var.aks_min_system_pool_node_count
-    max_count            = var.aks_max_system_pool_node_count
-    name                 = "systempool"
-    vm_size              = "Standard_D2as_v4"
-    os_sku               = "Ubuntu"
-    max_pods             = var.aks_systempool_max_pods_per_node
-    vnet_subnet_id       = azurerm_subnet.aks_subnet.id
-    os_disk_type         = "Managed"
-    os_disk_size_gb      = 64
+    auto_scaling_enabled    = true
+    min_count               = var.aks_min_system_pool_node_count
+    max_count               = var.aks_max_system_pool_node_count
+    name                    = "systempool"
+    vm_size                 = "Standard_D2as_v4"
+    os_sku                  = "Ubuntu"
+    max_pods                = var.aks_systempool_max_pods_per_node
+    vnet_subnet_id          = azurerm_subnet.aks_subnet.id
+    os_disk_type            = "Ephemeral"
+    os_disk_size_gb         = 64
+    host_encryption_enabled = true
     upgrade_settings {
       max_surge = "10%"
     }
@@ -44,7 +46,7 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.streamforge_uami.id]
+    identity_ids = [azurerm_user_assigned_identity.sf_aks_uami.id]
   }
 
   network_profile {
@@ -82,8 +84,8 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = var.tags
 
   depends_on = [
-    module.sf_uami_network_contributor,
-    module.sf_uami_dns_contributor,
+    module.sf_aks_uami_network_contributor,
+    module.sf_aks_uami_dns_contributor,
   ]
 
 }
@@ -99,8 +101,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "vlink_aks_app" {
   resource_group_name   = azurerm_resource_group.main.name
   private_dns_zone_name = azurerm_private_dns_zone.aks.name
   virtual_network_id    = azurerm_virtual_network.app_vnet.id
-
-  tags = var.tags
+  tags                  = var.tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "vlink_aks_jump" {
@@ -108,24 +109,61 @@ resource "azurerm_private_dns_zone_virtual_network_link" "vlink_aks_jump" {
   resource_group_name   = azurerm_resource_group.main.name
   private_dns_zone_name = azurerm_private_dns_zone.aks.name
   virtual_network_id    = azurerm_virtual_network.jump_vnet.id
-
-  tags = var.tags
+  tags                  = var.tags
 }
 
-resource "azurerm_user_assigned_identity" "streamforge_uami" {
+# Needed for Private Cluster - Default User Assigned Identity
+resource "azurerm_user_assigned_identity" "sf_aks_uami" {
   location            = azurerm_resource_group.main.location
-  name                = "${var.application_name}-uami"
+  name                = "${var.application_name}-aks-uami"
   resource_group_name = azurerm_resource_group.main.name
   tags                = var.tags
 }
 
-resource "azurerm_user_assigned_identity" "streamforge_workload_identity" {
+# Needed for Private Cluster - Default User Assigned Identity Role Assignments
+module "sf_aks_uami_network_contributor" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.sf_aks_uami.principal_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Network Contributor"
+  scope                = azurerm_virtual_network.app_vnet.id
+}
+
+module "sf_aks_uami_dns_contributor" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.sf_aks_uami.principal_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Private DNS Zone Contributor"
+  scope                = azurerm_private_dns_zone.aks.id
+}
+
+
+# Needed for Workload Identity - Used for Integrating with KeyVault CSI
+resource "azurerm_user_assigned_identity" "sf_workload_identity" {
   location            = azurerm_resource_group.main.location
   name                = "${var.application_name}-workload-uami"
   resource_group_name = azurerm_resource_group.main.name
   tags                = var.tags
 }
 
+resource "azurerm_federated_identity_credential" "sf_workload_identity_fic" {
+  name                      = "${azurerm_user_assigned_identity.sf_workload_identity.name}-fic"
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
+  user_assigned_identity_id = azurerm_user_assigned_identity.sf_workload_identity.id
+  subject                   = "system:serviceaccount:streamforge:sf-workload-sa"
+}
+
+module "sf_workload_identity_kv_reader" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.sf_workload_identity.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_key_vault.main.id
+}
+
+
+# Needed for Azure Load Balancer - Azure ALB Controller
 resource "azurerm_user_assigned_identity" "alb_uami" {
   name                = "azure-alb-identity"
   resource_group_name = azurerm_resource_group.main.name
@@ -133,12 +171,28 @@ resource "azurerm_user_assigned_identity" "alb_uami" {
   tags                = var.tags
 }
 
-resource "azurerm_federated_identity_credential" "streamforge_workload_identity_federated" {
-  name                      = "${azurerm_user_assigned_identity.streamforge_workload_identity.name}-federated"
-  audience                  = ["api://AzureADTokenExchange"]
-  issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
-  user_assigned_identity_id = azurerm_user_assigned_identity.streamforge_workload_identity.id
-  subject                   = "system:serviceaccount:streamforge:sf-workload-sa"
+module "alb_reader_access_aks_mc" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Reader"
+}
+
+module "alb_appw_config_manager" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "AppGW for Containers Configuration Manager"
+}
+
+module "alb_network_contributor" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_subnet.alb_subnet.id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Network Contributor"
 }
 
 resource "azurerm_federated_identity_credential" "alb_fic" {
@@ -147,52 +201,4 @@ resource "azurerm_federated_identity_credential" "alb_fic" {
   issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
   subject                   = "system:serviceaccount:azure-alb-system:alb-controller-sa"
   user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
-}
-
-module "sf_uami_network_contributor" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.streamforge_uami.principal_id
-  principal_type       = "ServicePrincipal"
-  role_definition_name = "Network Contributor"
-  scope                = azurerm_virtual_network.app_vnet.id
-}
-
-module "sf_uami_dns_contributor" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.streamforge_uami.principal_id
-  principal_type       = "ServicePrincipal"
-  role_definition_name = "Private DNS Zone Contributor"
-  scope                = azurerm_private_dns_zone.aks.id
-}
-
-module "sf_wi_kv_reader" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.streamforge_workload_identity.principal_id
-  role_definition_name = "Key Vault Secrets User"
-  principal_type       = "ServicePrincipal"
-  scope                = azurerm_key_vault.main.id
-}
-
-module "alb_reader_access_aks_mc" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
-  principal_type       = "ServicePrincipal"
-  role_definition_name = "Reader"
-}
-
-module "alb_appw_config_manager" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
-  principal_type       = "ServicePrincipal"
-  role_definition_name = "AppGW for Containers Configuration Manager"
-}
-
-module "alb_network_contributor" {
-  source               = "./role_assignments"
-  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-  scope                = azurerm_subnet.alb_subnet.id
-  principal_type       = "ServicePrincipal"
-  role_definition_name = "Network Contributor"
 }

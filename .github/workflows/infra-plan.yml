@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - infra/**
+      - main
     paths:
       - infra/terraform/**
   pull_request:
     branches:
-      - infra/**
+      - main
     paths:
       - infra/terraform/**
 env:
@@ -24,53 +24,23 @@ permissions:
   id-token: write
 
 jobs:
-  set-env:
-    runs-on: ubuntu-latest
-    outputs:
-      env_name: ${{ steps.branch-check.outputs.env_name }}
-    steps:
-      - id: branch-check
-        run: |
-          # If it's a PR, use base_ref (the target). If not, use the current branch name.
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            TARGET_BRANCH="${{ github.base_ref }}"
-          else
-            TARGET_BRANCH="${{ github.ref_name }}"
-          fi
-          echo $TARGET_BRANCH
-          if [[ "$TARGET_BRANCH" == "infra/production" ]]; then
-            echo "Environment is production"
-            echo "env_name=production" >> $GITHUB_OUTPUT
-          elif [[ "$TARGET_BRANCH" == "infra/development" ]]; then
-            echo "env_name=development" >> $GITHUB_OUTPUT
-            echo "Environment is development"
-          else
-            # Default to development for safety to prevent accidental Prod changes
-            echo "env_name=development" >> $GITHUB_OUTPUT
-            echo "Environment is development"
-          fi
-
   terraform-plan:
-    # if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./infra/terraform
 
     runs-on: ubuntu-latest
-    needs: [set-env]
-    environment: ${{ needs.set-env.outputs.env_name }}
-    # environment: ${{ github.event_name == 'pull_request' && (github.head_ref == 'infra/development' && 'development' || github.head_ref == 'infra/production' && 'production') || (github.ref == 'refs/heads/infra/development' && 'development' || github.ref == 'refs/heads/infra/production' && 'production') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: Terrafom format
         id: fmt
         run: terraform fmt -check
-        # continue-on-error: true
 
       - name: Terraform Init
         id: init
@@ -80,39 +50,39 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
           -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
           -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
-        # continue-on-error: true
 
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        # continue-on-error: true
 
-      - name: Terraform Security Checks
-        uses: aquasecurity/tfsec-action@v1.0.3
+      - name: Run Checkov action
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
         with:
+          quiet: true
           soft_fail: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          working_directory: ./infra/terraform
+          github_pat: ${{ secrets.GITHUB_TOKEN }}
+          directory: infra/terraform
 
       - name: Terraform Plan
         id: plan
-        # continue-on-error: true
         run: |
           terraform plan \
             -no-color \
             -var="postgres_administrator_password=${{secrets.POSTGRES_PASSWORD}}" \
             -var="cosmos_administrator_password=${{secrets.COSMOS_PASSWORD}}" \
             -var="jwt_secret=${{secrets.JWT_SECRET}}" \
-            -var="rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" \
+            -var="key_vault_admin_object_id=${{vars.KV_ADMIN_OBJECT_ID}}" \
+            -var="public_key_openssh=${{secrets.PUBLIC_KEY_PERSONAL}}" \
             -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
         uses: actions/upload-artifact@v4
         id: upload
-        # continue-on-error: true
         with:
           name: streamforge-tfplan
           path: infra/terraform/main.tfplan
+          retention-days: 1
 
       - name: Update PR with Plan
         uses: actions/github-script@v8
@@ -187,24 +157,29 @@ jobs:
               repo: context.repo.repo,
               body: output,
             });
- 
+
   terraform-apply:
-    # Only apply on pushes to the infra branches (post-merge)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/infra/development' || github.ref == 'refs/heads/infra/production')
-    needs: [set-env, terraform-plan]
-    environment: ${{ needs.set-env.outputs.env_name }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [terraform-plan]
     runs-on: ubuntu-latest
-    
     defaults:
       run:
         working-directory: ./infra/terraform
 
     steps:
+      - uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: SudheerKumarP0357
+          minimum-approvals: 1
+          exclude-workflow-initiator-as-approver: false
+          fail-on-denial: true
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
 
       - name: Terraform Init
         run: |
@@ -218,10 +193,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: streamforge-tfplan
-          # We download it directly into the working directory
           path: ./infra/terraform
 
       - name: Terraform Apply
         id: apply
-        # We specify the exact file downloaded from the artifact
         run: terraform apply -auto-approve main.tfplan
+
+      - name: Terraform Output For KeyVault Secrets
+        run: |
+          echo "TF_VAR_resource_group_name=$(terraform output -raw resource_group_name)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_storage_account_name=$(terraform output -raw storage_account_name)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_key_vault_name=$(terraform output -raw key_vault_name)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_postgres_administrator_password=$(terraform output -raw postgres_password)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_cosmos_cluster_connection_string=$(terraform output -raw cosmos_cluster_connection_string)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_redis_name=$(terraform output -raw redis_name)" >> key_vault_secrets_data.txt
+          echo "TF_VAR_jwt_secret=${{secrets.JWT_SECRET}}" >> key_vault_secrets_data.txt
+          echo "TF_VAR_rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" >> key_vault_secrets_data.txt
+          echo "TF_VAR_rabbitmq_default_user=${{vars.RABBITMQ_USER}}" >> key_vault_secrets_data.txt
+
+      - name: Upload Terraform Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: key-vault-secrets
+          path: key_vault_secrets_data.txt
+          retention-days: 1
