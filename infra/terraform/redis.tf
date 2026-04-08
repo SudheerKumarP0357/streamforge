@@ -12,7 +12,7 @@ resource "azurerm_managed_redis" "main" {
 }
 
 module "redis" {
-  source                = "./private-endpoint"
+  source                = "./modules/private-endpoint"
   resource_group_name   = azurerm_resource_group.main.name
   location              = azurerm_resource_group.main.location
   subnet_id             = azurerm_subnet.redis_subnet.id

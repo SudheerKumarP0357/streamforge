@@ -43,7 +43,7 @@ resource "azurerm_storage_container" "hls_videos" {
 
 
 module "blob" {
-  source                = "./private-endpoint"
+  source                = "./modules/private-endpoint"
   resource_group_name   = azurerm_resource_group.main.name
   location              = azurerm_resource_group.main.location
   subnet_id             = azurerm_subnet.storage_account_subnet.id

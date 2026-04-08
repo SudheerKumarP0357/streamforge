@@ -31,7 +31,7 @@ resource "azurerm_role_assignment" "key_vault_admin_terraform" {
 }
 
 module "keyvault" {
-  source                = "./private-endpoint"
+  source                = "./modules/private-endpoint"
   resource_group_name   = azurerm_resource_group.main.name
   location              = azurerm_resource_group.main.location
   subnet_id             = azurerm_subnet.keyvault_subnet.id
