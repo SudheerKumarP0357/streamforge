@@ -40,4 +40,4 @@ go.work.sum
 
 **/terraform.sh
 **/.terraform
-**/.terraform*
+**/plan.html
