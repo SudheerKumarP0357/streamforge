@@ -13,7 +13,7 @@ jobs:
       - name: Download values.txt
         uses: actions/download-artifact@v4
         with:
-          name: values
+          name: values.txt
           path: .
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
