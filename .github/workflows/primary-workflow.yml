@@ -11,7 +11,7 @@ jobs:
           export NAME=Sudheer
           export EVENT_NAME=${{ github.event_name }}
           echo "NAME=${NAME}" >> values.txt
-          echo "EVENT_NAME=${EVENT_NAME} >> values.txt
+          echo "EVENT_NAME=${EVENT_NAME}" >> values.txt
       - name: Upload values.txt
         uses: actions/upload-artifact@v4
         id: upload
