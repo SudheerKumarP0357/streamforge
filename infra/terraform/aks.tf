@@ -23,16 +23,16 @@ resource "azurerm_kubernetes_cluster" "main" {
   private_dns_zone_id = azurerm_private_dns_zone.aks.id
 
   default_node_pool {
-    auto_scaling_enabled    = true
-    min_count               = var.aks_min_system_pool_node_count
-    max_count               = var.aks_max_system_pool_node_count
-    name                    = "systempool"
-    vm_size                 = "Standard_D2as_v4"
-    os_sku                  = "Ubuntu"
-    max_pods                = var.aks_systempool_max_pods_per_node
-    vnet_subnet_id          = azurerm_subnet.aks_subnet.id
-    os_disk_size_gb         = 128
-    host_encryption_enabled = true
+    auto_scaling_enabled = true
+    min_count            = var.aks_min_system_pool_node_count
+    max_count            = var.aks_max_system_pool_node_count
+    name                 = "systempool"
+    vm_size              = "Standard_D2as_v4"
+    os_sku               = "Ubuntu"
+    max_pods             = var.aks_systempool_max_pods_per_node
+    vnet_subnet_id       = azurerm_subnet.aks_subnet.id
+    os_disk_size_gb      = 128
+    # host_encryption_enabled = true # Azure For Students Subscription does not allow host encryption
     upgrade_settings {
       max_surge = "10%"
     }
