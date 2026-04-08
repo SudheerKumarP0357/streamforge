@@ -74,6 +74,7 @@ jobs:
             -var="jwt_secret=${{secrets.JWT_SECRET}}" \
             -var="rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" \
             -var="key_vault_admin_object_id=${{vars.KV_ADMIN_OBJECT_ID}}"\
+            -var="public_key_openssh=${{secrets.PUBLIC_KEY_PERSONAL}}"
             -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
