@@ -46,7 +46,7 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.streamforge_uami.id]
+    identity_ids = [azurerm_user_assigned_identity.sf_aks_uami.id]
   }
 
   network_profile {
@@ -84,8 +84,8 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = var.tags
 
   depends_on = [
-    module.sf_uami_network_contributor,
-    module.sf_uami_dns_contributor,
+    module.sf_aks_uami_network_contributor,
+    module.sf_aks_uami_dns_contributor,
   ]
 
 }
