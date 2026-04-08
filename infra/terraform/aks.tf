@@ -31,8 +31,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     os_sku                  = "Ubuntu"
     max_pods                = var.aks_systempool_max_pods_per_node
     vnet_subnet_id          = azurerm_subnet.aks_subnet.id
-    os_disk_type            = "Ephemeral"
-    os_disk_size_gb         = 64
+    os_disk_size_gb         = 128
     host_encryption_enabled = true
     upgrade_settings {
       max_surge = "10%"
