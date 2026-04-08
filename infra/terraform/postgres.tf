@@ -65,10 +65,3 @@ resource "azurerm_private_dns_zone_virtual_network_link" "vlink_postgres_jump" {
   virtual_network_id    = azurerm_virtual_network.jump_vnet.id
   tags                  = var.tags
 }
-
-# resource "azurerm_postgresql_flexible_server_firewall_rule" "my_ip" {
-#   name             = "Allow_My_Ip"
-#   server_id        = azurerm_postgresql_flexible_server.main.id
-#   start_ip_address = chomp(data.http.my_ip.response_body)
-#   end_ip_address   = chomp(data.http.my_ip.response_body)
-# }

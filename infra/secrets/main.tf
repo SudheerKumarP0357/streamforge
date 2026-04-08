@@ -21,28 +21,17 @@ resource "azurerm_key_vault_secret" "azure_storage_account_key" {
 }
 
 # ------ PostgreSQL Flexible Server Secrets ------
-data "azurerm_postgresql_flexible_server" "main" {
-  name                = var.postgresql_flexible_server_name
-  resource_group_name = var.resource_group_name
-}
-
 resource "azurerm_key_vault_secret" "postgress_password" {
   name         = "postgres-password"
-  value        = data.azurerm_postgresql_flexible_server.main.administrator_password
+  value        = var.postgres_administrator_password
   key_vault_id = data.azurerm_key_vault.main.id
 }
 
 
 # ------ Cosmos DB Secrets ------
-data "azurerm_mongo_cluster" "main" {
-  name                = var.cosmos_cluster_name
-  resource_group_name = var.resource_group_name
-}
 resource "azurerm_key_vault_secret" "cosmos_connection_string" {
-  name = "cosmos-connection-string"
-  value = [
-    for cs in data.azurerm_mongo_cluster.main.connection_strings : cs.value if cs.name == "GlobalReadWrite"
-  ][0]
+  name         = "cosmos-connection-string"
+  value        = var.cosmos_cluster_connection_string
   key_vault_id = data.azurerm_key_vault.main.id
 }
 

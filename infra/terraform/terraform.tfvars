@@ -11,7 +11,7 @@ cosmos_compute_tier           = "Free"
 
 # postgres
 postgres_administrator_username = "streamforge"
-postgres_server_version         = 18
+postgres_server_version         = 17
 postgres_storage_in_mb          = 32768
 postgres_storage_tier           = "P4"
 postgres_sku                    = "B_Standard_B1ms"
@@ -21,9 +21,6 @@ postgres_extensions             = "PGCRYPTO,UUID-OSSP"
 
 # Managed Redis
 redis_sku_name = "Balanced_B0"
-
-# RabbitMQ Default Password
-rabbitmq_default_user = "streamforge"
 
 
 # Key Vault
@@ -40,10 +37,3 @@ aks_max_system_pool_node_count   = 1
 aks_min_system_pool_node_count   = 1
 aks_systempool_max_pods_per_node = 250
 kubectl_version                  = "1.35"
-
-
-# rabbitmq_default_pass           = "Streamforge0357"
-# postgres_administrator_password = "Password0357"
-# cosmos_administrator_password   = "Password0357"
-# # JWT secret
-# jwt_secret = "super-secret-for-streamforge-app"

@@ -36,7 +36,6 @@ go.work.sum
 **/.env
 **/build
 **/node_modules
-**/**-secrets*.yml
 
 **/terraform.sh
 **/.terraform

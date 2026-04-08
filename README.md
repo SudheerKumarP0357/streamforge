@@ -30,9 +30,9 @@ StreamForge follows a **microservices architecture** deployed on **Azure Kuberne
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌────────────────┐
-│   Frontend   │────▶│   API Server  │────▶│   PostgreSQL    │
-│  (Next.js)   │     │   (Go 1.24)   │     │   (v17+)        │
-│  Port: 3000  │     │  Port: 8080   │     │  Port: 5432     │
+│   Frontend  │────▶│  API Server │────▶│   PostgreSQL    │
+│  (Next.js)  │     │   (Go 1.24)   │     │   (v17+)        │
+│  Port: 3000 │     │  Port: 8080   │     │  Port: 5432     │
 └─────────────┘     └──────┬───────┘     └────────────────┘
                            │
                     ┌──────┴───────┐

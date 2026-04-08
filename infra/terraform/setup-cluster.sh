@@ -2,18 +2,27 @@
 
 set -e
 
-RESOURCE_GROUP_NAME=${1}
-AKS_CLUSTER_NAME=${2}
-KUBECTL_VERSION=${3}
-ALB_SUBNET_ID=${4}
-ALB_NAMESPACE=${5}
-ALB_NAME=${6}
+RESOURCE_GROUP_NAME=${2}
+AKS_CLUSTER_NAME=${3}
+KUBECTL_VERSION=${4:-""}
+ALB_SUBNET_ID=${5}
+ALB_NAMESPACE=${6}
+ALB_NAME=${7}
+
 
 # Consent Logic
 if [[ $# -ge 1 && $1 == "-y" ]]; then
     global_consent=0
 else
     global_consent=1
+fi
+
+
+if [[ -z "$RESOURCE_GROUP_NAME" || -z "$AKS_CLUSTER_NAME" || \
+      -z "$ALB_SUBNET_ID" || -z "$ALB_NAMESPACE" || -z "$ALB_NAME" ]]; then
+    echo "Usage: $0 [-y] <resource_group> <aks_name> <kubectl_version> <alb_subnet_id> <alb_namespace> <alb_name>"
+    echo "  -y  Skip confirmation prompts (for automation)"
+    exit 1
 fi
 
 function assert_consent {
@@ -28,7 +37,7 @@ function assert_consent {
 }
 
 # Default to no consent for automation, change to 1 for interactive mode
-global_consent=0 
+# global_consent=0 
 
 install_dependencies(){
     assert_consent "Add packages necessary to modify your apt-package sources?" ${global_consent}
@@ -40,6 +49,11 @@ install_dependencies(){
 }
 
 setup_kubectl(){
+    if command -v kubectl &>/dev/null; then
+        echo "kubectl already installed: $(kubectl version --client --short 2>/dev/null)"
+        return 0
+    fi
+
     VERSION=$1
     if [[ -z $VERSION ]]; then
         VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt | cut -d. -f1-2)
@@ -90,14 +104,43 @@ login_azure_aks(){
 }
 
 azure_agfc_addon(){
+    
+    # Install Azure CLI extensions.
+    az extension add --name alb
+    az extension add --name aks-preview 
+    
     # Update the aks to enable the gateway api and application load balancer
+    echo "Updating AKS cluster to enable gateway api and application load balancer"
     az aks update --name ${AKS_CLUSTER_NAME} --resource-group ${RESOURCE_GROUP_NAME} --enable-gateway-api --enable-application-load-balancer
 
+    echo "Waiting for ALB controller pods to be ready..."
+    kubectl wait pod --selector app=alb-controller -n kube-system --for=condition=Ready 
+    
     # Verify the alb-controller is running in the kube-system namespace
-    kubectl get pods -n kube-system | grep alb-controller
+    echo "Verifying alb-controller is running in the kube-system namespace"
+    kubectl get pods -n kube-system | grep alb-controller || true
+
+    echo "Waiting for GatewayClass to be accepted..."
+    kubectl wait gatewayclass azure-alb-external --for=condition=Accepted
 
     # Verify GatewayClass azure-alb-external is installed on your cluster
+    echo "Verifying GatewayClass azure-alb-external is installed on your cluster"
     kubectl get gatewayclass azure-alb-external -o yaml
+}
+
+azure_agfc_vnet_integration(){
+    # Get the AKS Managed Group Name
+    # Get the ApplicationLoadBalancer Identity Id deployed by ALB Controller
+    # Add Role Assignment for ALB Identity to access the VNet As Network Contributor
+
+    MC_RESOURCE_GROUP=$(az aks show --name $AKS_CLUSTER_NAME --resource-group $RESOURCE_GROUP_NAME --query "nodeResourceGroup" -o tsv)
+    mcResourceGroupId=$(az group show --name $MC_RESOURCE_GROUP --query id -otsv)
+
+    IDENTITY_RESOURCE_NAME="applicationloadbalancer-${AKS_CLUSTER_NAME}"
+    principalId=$(az identity show -g $MC_RESOURCE_GROUP -n $IDENTITY_RESOURCE_NAME --query principalId -otsv)
+
+    # Delegate Network Contributor permission for join to association subnet
+    az role assignment create --assignee-object-id $principalId --assignee-principal-type ServicePrincipal --scope $ALB_SUBNET_ID --role "Network Contributor"
 }
 
 azure_agfc_alb(){
@@ -126,14 +169,14 @@ azure_agfc_alb(){
     echo "Creating Namespace: $ALB_NAMESPACE"
     echo "$KUBECTL_NS" | kubectl apply -f -
     
-    kubectl wait --for=condition=Active namespace/$ALB_NAMESPACE --timeout=30s
+    kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/$ALB_NAMESPACE
 
-    echo "Creating Application Load Balancer: $ALB_NAME"
+    echo "Creating Application Load Balancer: $ALB_NAME"    
     echo "$KUBECTL_ALB" | kubectl apply -f -
 
     echo "Waiting for ALB to be Ready..."
     kubectl wait --for='jsonpath={.status.conditions[?(@.type=="Ready")].status}=True' \
-        applicationloadbalancer/$ALB_NAME -n $ALB_NAMESPACE --timeout=300s
+        applicationloadbalancer/$ALB_NAME -n $ALB_NAMESPACE
 }
 
 
@@ -162,4 +205,12 @@ install_dependencies
 setup
 login_azure_aks
 azure_agfc_addon
+azure_agfc_vnet_integration
 azure_agfc_alb
+
+
+echo ""
+echo "✓ Setup complete"
+echo "  ALB:       $ALB_NAME in namespace $ALB_NAMESPACE"
+echo "  Cluster:   $AKS_CLUSTER_NAME"
+echo "  Run: kubectl get applicationloadbalancer -n $ALB_NAMESPACE"

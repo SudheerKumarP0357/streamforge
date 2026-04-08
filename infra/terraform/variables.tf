@@ -91,14 +91,6 @@ variable "jwt_secret" {
   type = string
 }
 
-variable "rabbitmq_default_user" {
-  type = string
-}
-
-variable "rabbitmq_default_pass" {
-  type = string
-}
-
 variable "key_vault_admin_object_id" {
   type = string
 }

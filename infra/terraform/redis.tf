@@ -8,7 +8,6 @@ resource "azurerm_managed_redis" "main" {
   default_database {
     access_keys_authentication_enabled = true
   }
-
   tags = var.tags
 }
 

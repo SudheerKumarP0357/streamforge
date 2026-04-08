@@ -49,13 +49,6 @@ resource "azurerm_subnet_network_security_group_association" "jump_server" {
   network_security_group_id = azurerm_network_security_group.jump_server.id
 }
 
-
-# resource "tls_private_key" "jump_server_ssh_keys" {
-#   algorithm = "RSA"
-#   rsa_bits  = 4096
-# }
-
-
 resource "azurerm_linux_virtual_machine" "jump_server" {
   name                = "jumphost"
   resource_group_name = azurerm_resource_group.main.name
@@ -107,9 +100,40 @@ resource "azurerm_user_assigned_identity" "jump_server" {
   tags                = var.tags
 }
 
-resource "azurerm_role_assignment" "jump_server" {
+
+### BELOW ASSIGMENTS ARE NEEDED FOR JUMPSERVER TO ACCESS AKS CLUSTER AND UPDATE WITH ALB-CONTROLLER ADD-ON
+resource "azurerm_role_assignment" "aks_cluster_user_role" {
   principal_id         = azurerm_user_assigned_identity.jump_server.principal_id
-  role_definition_name = "Contributor"
+  role_definition_name = "Azure Kubernetes Service Cluster User Role"
   principal_type       = "ServicePrincipal"
-  scope                = azurerm_resource_group.main.id
+  scope                = azurerm_kubernetes_cluster.main.id
 }
+
+resource "azurerm_role_assignment" "aks_cluster_contributor_role" {
+  principal_id         = azurerm_user_assigned_identity.jump_server.principal_id
+  role_definition_name = "Azure Kubernetes Service Contributor Role"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_kubernetes_cluster.main.id
+}
+
+resource "azurerm_role_assignment" "vnet_app_network_contributor" {
+  principal_id         = azurerm_user_assigned_identity.jump_server.principal_id
+  role_definition_name = "Network Contributor"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_virtual_network.app_vnet.id
+}
+
+resource "azurerm_role_assignment" "sf_aks_uami_mio" {
+  principal_id         = azurerm_user_assigned_identity.jump_server.principal_id
+  role_definition_name = "Managed Identity Operator"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_user_assigned_identity.sf_aks_uami.id
+}
+
+resource "azurerm_role_assignment" "aks_node_resource_group_reader" {
+  principal_id         = azurerm_user_assigned_identity.jump_server.principal_id
+  role_definition_name = "Reader"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_kubernetes_cluster.main.node_resource_group
+}
+### ABOVE ASSIGMENTS ARE NEEDED FOR JUMPSERVER TO ACCESS AKS CLUSTER AND UPDATE WITH ALB-CONTROLLER ADD-ON
