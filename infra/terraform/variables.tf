@@ -131,3 +131,7 @@ variable "aks_systempool_max_pods_per_node" {
 variable "kubectl_version" {
   type = string
 }
+
+variable "public_key_openssh" {
+  type = string
+}
