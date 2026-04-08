@@ -50,14 +50,10 @@ resource "azurerm_subnet_network_security_group_association" "jump_server" {
 }
 
 
-data "template_file" "cloud_init_config" {
-  template = file("${path.module}/cloud-init.yml")
-}
-
-resource "tls_private_key" "jump_server_ssh_keys" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
+# resource "tls_private_key" "jump_server_ssh_keys" {
+#   algorithm = "RSA"
+#   rsa_bits  = 4096
+# }
 
 
 resource "azurerm_linux_virtual_machine" "jump_server" {
@@ -83,8 +79,9 @@ resource "azurerm_linux_virtual_machine" "jump_server" {
   }
 
   admin_ssh_key {
-    username   = "adminuser"
-    public_key = tls_private_key.jump_server_ssh_keys.public_key_openssh
+    username = "adminuser"
+    # public_key = tls_private_key.jump_server_ssh_keys.public_key_openssh
+    public_key = var.public_key_openssh
   }
 
   os_disk {
