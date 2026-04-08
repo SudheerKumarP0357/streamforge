@@ -227,5 +227,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: key-vault-secrets
-          path: key_vault_secrets_data.txt
+          path: infra/terraform/key_vault_secrets_data.txt
           retention-days: 1
