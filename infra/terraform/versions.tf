@@ -27,7 +27,7 @@ provider "azurerm" {
       purge_soft_deleted_secrets_on_destroy = true  # hard-delete secrets inside it
       recover_soft_deleted_keys             = false # don't auto-recover keys
       recover_soft_deleted_secrets          = false # don't auto-recover secrets
-      recover_soft_deleted_key_vaults       = false
+      recover_soft_deleted_key_vaults       = true
     }
 
     postgresql_flexible_server {
