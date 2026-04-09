@@ -1,0 +1,180 @@
+name: Infra Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm'
+        required: true
+        type: string
+      terraform_run_id:
+        description: "Run ID of the Terraform - Azure workflow"
+        required: true
+        type: string
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+  actions: read
+
+jobs:
+  validate-intent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm intent
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "destroy" ]]; then
+            echo "You must type 'destroy' to proceed"
+            exit 1
+          fi
+
+  destroy-secrets:
+    needs: validate-intent
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra/secrets
+    steps:
+      - uses: actions/checkout@v6
+        name: checkout
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Download Key Vault Secrets Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: key-vault-secrets
+          run-id: ${{ github.event.inputs.terraform_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: infra/secrets
+
+      - name: Export Variables
+        run: |
+          while IFS='=' read -r key value; do
+            echo "$key=$value" >> $GITHUB_ENV
+          done < key_vault_secrets_data.txt
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me/ip)" >> $GITHUB_OUTPUT
+
+      - name: Open KeyVault
+        id: open_kv
+        run: |
+          az keyvault update --name ${TF_VAR_key_vault_name} --public-network-access Enabled
+          az keyvault network-rule add \
+            --name ${TF_VAR_key_vault_name} \
+            --ip-address ${{ steps.runner_ip.outputs.ip }} \
+            --resource-group ${TF_VAR_resource_group_name}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+            -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.KV_BACKEND_KEY }}"
+
+      - name: Terraform Plan Destroy
+        run: terraform plan -destroy -out=secrets-destroy.tfplan
+
+      - name: Post Plan Summary
+        run: |
+          echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
+          terraform show secrets-destroy.tfplan >> $GITHUB_STEP_SUMMARY
+
+      - name: Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: SudheerKumarP0357
+          minimum-approvals: 1
+          issue-title: "🔴 Approval Required — Destroy KeyVault Secrets"
+          issue-body: |
+            Triggered by: **${{ github.actor }}**
+            Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Reply **approve** to proceed or **deny** to cancel.
+          fail-on-denial: true
+
+      - name: Terraform Apply Destroy
+        run: terraform apply -auto-approve secrets-destroy.tfplan
+
+      - name: Close KeyVault
+        if: always()
+        run: |
+          az keyvault update --name ${TF_VAR_key_vault_name} --public-network-access Disabled
+          az keyvault network-rule remove \
+            --name ${TF_VAR_key_vault_name} \
+            --ip-address ${{ steps.runner_ip.outputs.ip }} \
+            --resource-group ${TF_VAR_resource_group_name}
+
+  destroy-infra:
+    needs: [validate-intent, destroy-secrets]
+    if: success() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    steps:
+      - uses: actions/checkout@v6
+        name: checkout
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+            -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.BACKEND_STATE_KEY }}"
+
+      - name: Terraform Plan Destroy
+        run: |
+          terraform plan \
+            -destroy \
+            -no-color \
+            -var="postgres_administrator_password=${{secrets.POSTGRES_PASSWORD}}" \
+            -var="cosmos_administrator_password=${{secrets.COSMOS_PASSWORD}}" \
+            -var="jwt_secret=${{secrets.JWT_SECRET}}" \
+            -var="key_vault_admin_object_id=${{vars.KV_ADMIN_OBJECT_ID}}" \
+            -var="public_key_openssh=${{secrets.PUBLIC_KEY_PERSONAL}}" \
+            -out=infra-destroy.tfplan
+
+      - name: Post Plan Summary
+        run: |
+          echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
+          terraform show infra-destroy.tfplan >> $GITHUB_STEP_SUMMARY
+
+      - name: Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: SudheerKumarP0357
+          minimum-approvals: 1
+          issue-title: "🔴 Approval Required — Destroy Complete infrastructure"
+          issue-body: |
+            Triggered by: **${{ github.actor }}**
+            Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Reply **approve** to proceed or **deny** to cancel.
+          fail-on-denial: true
+
+      - name: Terraform Apply Destroy
+        run: terraform apply -auto-approve infra-destroy.tfplan
