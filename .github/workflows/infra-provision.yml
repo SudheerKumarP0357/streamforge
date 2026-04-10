@@ -9,8 +9,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - infra/terraform/**
 
 env:
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
