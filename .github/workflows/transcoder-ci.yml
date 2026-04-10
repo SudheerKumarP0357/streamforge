@@ -14,6 +14,10 @@ on:
     paths:
       - "backend/transcoder/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,10 +50,7 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
       - uses: ./.github/actions/docker-build-push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         name: Docker Build & Push
         with:
           REGISTRY: ghcr.io
@@ -57,3 +58,5 @@ jobs:
           ARTIFACT_NAME: transcoder
           CONTEXT_PATH: ./backend/transcoder
           DOCKERFILE_NAME: Dockerfile
+          PUSH_TO_REGISTRY: ${{ github.event_name == 'push' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

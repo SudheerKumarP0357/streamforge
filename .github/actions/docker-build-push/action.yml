@@ -21,6 +21,13 @@ inputs:
     description: "Docker build arguments (newline separated)"
     required: false
     default: ""
+  PUSH_TO_REGISTRY:
+    description: "Push to registry"
+    required: true
+    default: "false"
+  GITHUB_TOKEN:
+    description: "GitHub Token"
+    required: true
 
 runs:
   using: composite
@@ -33,7 +40,7 @@ runs:
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ env.GITHUB_TOKEN }}
+        password: ${{ inputs.GITHUB_TOKEN }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
@@ -55,12 +62,11 @@ runs:
       with:
         context: ${{ inputs.CONTEXT_PATH }}
         file: ${{ inputs.CONTEXT_PATH }}/${{ inputs.DOCKERFILE_NAME }}
-        push: true
+        push: ${{ inputs.PUSH_TO_REGISTRY }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        platforms: linux/amd64
         provenance: false
         build-args: ${{ inputs.BUILD_ARGS }}
 
