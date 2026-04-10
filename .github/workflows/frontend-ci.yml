@@ -14,32 +14,39 @@ on:
     paths:
       - "frontend/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   ARTIFACT_NAME: frontend
 
 jobs:
-  build:
+  build-frontend:
+    name: Build Frontend
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 24.x
+      - name: Use Node.js 24.11.0
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 24.11.0
           cache: "npm"
           cache-dependency-path: ./frontend/package-lock.json
       - run: npm ci
         name: Install dependencies
-        working-directory: ./frontend
       - run: npm run build
         name: Build the Frontend
-        working-directory: ./frontend
 
   docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-frontend
 
     permissions:
       contents: read
@@ -48,13 +55,12 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
       - uses: ./.github/actions/docker-build-push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           REGISTRY: ghcr.io
           IMAGE_NAME: ${{ github.repository }}
           ARTIFACT_NAME: frontend
           CONTEXT_PATH: ./frontend
           DOCKERFILE_NAME: Dockerfile
+          PUSH_TO_REGISTRY: ${{ github.event_name == 'push' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
