@@ -42,6 +42,7 @@ jobs:
         working-directory: ./frontend
 
   docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: build
 
