@@ -11,8 +11,6 @@ on:
   pull_request:
     branches:
       - "main"
-    paths:
-      - "frontend/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
