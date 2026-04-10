@@ -19,7 +19,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-api:
+    name: Build API
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,7 +43,7 @@ jobs:
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-api
     permissions:
       contents: read
       packages: write
