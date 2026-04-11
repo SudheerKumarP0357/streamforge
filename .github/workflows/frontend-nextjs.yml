@@ -88,8 +88,8 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/${{ env.IMAGE_NAME }}/${{ env.ARTIFACT_NAME }}
-            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}/${{ env.ARTIFACT_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
           tags: |
             type=sha
             type=ref,event=branch
@@ -118,8 +118,8 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: |
-            ghcr.io/${{ env.IMAGE_NAME }}/${{ env.ARTIFACT_NAME }}
-            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}/${{ env.ARTIFACT_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 

@@ -21,3 +21,5 @@ docs for more detail on building and pushing.
 ## References
 
 * [Docker's Node.js guide](https://docs.docker.com/language/nodejs/)
+
+[![Docker Build and Push](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml)
