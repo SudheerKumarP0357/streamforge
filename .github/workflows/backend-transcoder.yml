@@ -1,0 +1,116 @@
+---
+name: Backend Transcoder CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "backend/transcoder/**"
+  pull_request:
+    branches:
+      - "main"
+    # Intentionally no paths filter — required status check must
+    # always run and report on every PR regardless of changed files
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-transcoder:
+    name: Build Transcoder
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/transcoder
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.24.0"
+          cache-dependency-path: backend/transcoder/go.sum
+
+      - name: Build API
+        run: go build -mod=readonly -v ./...
+
+      - name: Go Vet
+        run: go vet ./...
+
+  docker-build-push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Docker Build and Push
+    runs-on: ubuntu-latest
+    needs: build-transcoder
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_USE_AZUREAD: true
+      ARM_USE_OIDC: true
+      IMAGE_NAME: ${{ github.repository }}
+      ARTIFACT_NAME: transcoder
+      CONTEXT_PATH: ./backend/transcoder
+      DOCKERFILE_NAME: Dockerfile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Login GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Login Azure using ServicePrincipal
+      - name: Login Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Login Azure Container Registry
+        run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=raw,value=latest
+
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v7
+        id: push
+        with:
+          context: ${{ env.CONTEXT_PATH }}
+          file: ${{ env.CONTEXT_PATH }}/${{ env.DOCKERFILE_NAME }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
