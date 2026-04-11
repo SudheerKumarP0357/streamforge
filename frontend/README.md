@@ -2,3 +2,5 @@
 NextJs + React - For UI and User Interaction
 
 [![Streamforge Frontend CI](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml)
+
+[![Docker Build and Push](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SudheerKumarP0357/streamforge/actions/workflows/frontend-ci.yml)
