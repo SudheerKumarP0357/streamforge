@@ -22,6 +22,8 @@ jobs:
   build-api:
     name: Build API
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ./backend/api
