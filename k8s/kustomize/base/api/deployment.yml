@@ -130,20 +130,16 @@ spec:
                 name: sf-secrets
 
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - wget -qO- http://localhost:8080/healthz || exit 1
+            httpGet:
+              path: /healthz
+              port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - wget -qO- http://localhost:8080/healthz || exit 1
+            httpGet:
+              path: /healthz
+              port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 5
