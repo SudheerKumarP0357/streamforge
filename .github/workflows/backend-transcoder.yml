@@ -22,6 +22,8 @@ jobs:
   build-transcoder:
     name: Build Transcoder
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ./backend/transcoder
