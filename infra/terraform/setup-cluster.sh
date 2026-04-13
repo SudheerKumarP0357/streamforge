@@ -109,9 +109,14 @@ azure_agfc_addon(){
     az extension add --name alb
     az extension add --name aks-preview 
     
+    ALB_ENABLED=$(az aks show --name ${AKS_CLUSTER_NAME} --resource-group ${RESOURCE_GROUP_NAME} --query ["ingressProfile.gatewayApi.installation"] -o tsv)
     # Update the aks to enable the gateway api and application load balancer
-    echo "Updating AKS cluster to enable gateway api and application load balancer"
-    az aks update --name ${AKS_CLUSTER_NAME} --resource-group ${RESOURCE_GROUP_NAME} --enable-gateway-api --enable-application-load-balancer
+    if [[ $ALB_ENABLED == "Disabled" || $ALB_ENABLED == "None" ]]; then
+        echo "Updating AKS cluster to enable gateway api and application load balancer"
+        az aks update --name ${AKS_CLUSTER_NAME} --resource-group ${RESOURCE_GROUP_NAME} --enable-gateway-api --enable-application-load-balancer
+    else
+        echo "AKS cluster is already enabled for gateway api and application load balancer"
+    fi
 
     echo "Waiting for ALB controller pods to be ready..."
     kubectl wait pod --selector app=alb-controller -n kube-system --for=condition=Ready 
@@ -121,26 +126,11 @@ azure_agfc_addon(){
     kubectl get pods -n kube-system | grep alb-controller || true
 
     echo "Waiting for GatewayClass to be accepted..."
-    kubectl wait gatewayclass azure-alb-external --for=condition=Accepted
+    kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s
 
     # Verify GatewayClass azure-alb-external is installed on your cluster
     echo "Verifying GatewayClass azure-alb-external is installed on your cluster"
     kubectl get gatewayclass azure-alb-external -o yaml
-}
-
-azure_agfc_vnet_integration(){
-    # Get the AKS Managed Group Name
-    # Get the ApplicationLoadBalancer Identity Id deployed by ALB Controller
-    # Add Role Assignment for ALB Identity to access the VNet As Network Contributor
-
-    MC_RESOURCE_GROUP=$(az aks show --name $AKS_CLUSTER_NAME --resource-group $RESOURCE_GROUP_NAME --query "nodeResourceGroup" -o tsv)
-    mcResourceGroupId=$(az group show --name $MC_RESOURCE_GROUP --query id -otsv)
-
-    IDENTITY_RESOURCE_NAME="applicationloadbalancer-${AKS_CLUSTER_NAME}"
-    principalId=$(az identity show -g $MC_RESOURCE_GROUP -n $IDENTITY_RESOURCE_NAME --query principalId -otsv)
-
-    # Delegate Network Contributor permission for join to association subnet
-    az role assignment create --assignee-object-id $principalId --assignee-principal-type ServicePrincipal --scope $ALB_SUBNET_ID --role "Network Contributor"
 }
 
 azure_agfc_alb(){
@@ -175,10 +165,17 @@ azure_agfc_alb(){
     echo "$KUBECTL_ALB" | kubectl apply -f -
 
     echo "Waiting for ALB to be Ready..."
-    kubectl wait --for='jsonpath={.status.conditions[?(@.type=="Ready")].status}=True' \
-        applicationloadbalancer/$ALB_NAME -n $ALB_NAMESPACE
+    kubectl wait --for='jsonpath={.status.conditions[?(@.type=="Accepted")].status}=True' \
+        applicationloadbalancer/$ALB_NAME -n $ALB_NAMESPACE --timeout=600s
 }
 
+# azure_cert_manager(){
+#     # install cert-manager
+#     kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.20.2/cert-manager.yaml
+    
+#     # wait for cert-manager to be ready
+#     kubectl wait --for=condition=Ready pod --selector app=cert-manager -n cert-manager --timeout=600s
+# }
 
 setup(){
     setup_kubectl $KUBECTL_VERSION
@@ -205,7 +202,6 @@ install_dependencies
 setup
 login_azure_aks
 azure_agfc_addon
-azure_agfc_vnet_integration
 azure_agfc_alb
 
 

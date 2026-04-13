@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: transcoder
     app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: backend
+    azure.workload.identity/use: "true"
 spec:
   replicas: 1
   selector:
@@ -133,20 +134,16 @@ spec:
             - name: RABBITMQ_DEAD_LETTER_QUEUE
               value: transcoder.jobs.dlq
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - wget -qO- http://localhost:9090/metrics || exit 1
+            httpGet:
+              path: /metrics
+              port: 9090
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - wget -qO- http://localhost:9090/metrics || exit 1
+            httpGet:
+              path: /metrics
+              port: 9090
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 5
