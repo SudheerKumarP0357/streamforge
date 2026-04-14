@@ -109,7 +109,7 @@ jobs:
         with:
           context: ${{ env.CONTEXT_PATH }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.DOCKERFILE_NAME }}
-          push: ${{ github.event_name == 'push' }}
+          push: ${{ github.event_name == 'push' }} || ${{ github.event_name == 'workflow_dispatch' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -131,7 +131,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Update image tag in kustomize
-        run: ./scripts/update-image-tag.sh -s ${{ env.ARTIFACT_NAME }} -t ${{ github.sha }}
+        run: bash ./scripts/update-image-tag.sh -s ${{ env.ARTIFACT_NAME }} -t "sha-${{ github.sha }}"
 
       - name: Create Pull Request
         env:
