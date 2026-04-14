@@ -109,7 +109,8 @@ jobs:
         with:
           context: ${{ env.CONTEXT_PATH }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.DOCKERFILE_NAME }}
-          push: ${{ github.event_name == 'push' }} || ${{ github.event_name == 'workflow_dispatch' }}
+          push: ${{ fromJson(github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+          # push: ${{ github.event_name == 'push' }} || ${{ github.event_name == 'workflow_dispatch' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
