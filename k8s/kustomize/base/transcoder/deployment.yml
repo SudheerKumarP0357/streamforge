@@ -4,7 +4,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sf-transcoder
-  namespace: streamforge
   labels:
     app.kubernetes.io/name: transcoder
     app.kubernetes.io/part-of: streamforge-application
@@ -112,7 +111,7 @@ spec:
 
       containers:
         - name: transcoder
-          image: acrstreamforgedevci.azurecr.io/streamforge/transcoder:v1
+          image: ghcr.io/sudheerkumarp0357/streamforge/transcoder:latest
           resources:
             limits:
               memory: "2Gi"

@@ -1,0 +1,19 @@
+---
+- op: replace
+  path: /metadata/name
+  value: streamforge-dev
+
+---
+- op: replace
+  path: /spec/parameters/clientID
+  value: 424c6d96-c93a-49e1-93ae-0858d510e154
+
+---
+- op: replace
+  path: /spec/parameters/keyvaultName
+  value: kv-streamforgedevci
+
+---
+- op: replace
+  path: /spec/parameters/tenantID
+  value: 92768f97-e40a-49b6-8fd5-a20497464fdc

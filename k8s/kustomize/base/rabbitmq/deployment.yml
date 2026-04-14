@@ -4,7 +4,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sf-rabbitmq
-  namespace: streamforge
   labels:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/part-of: streamforge-application

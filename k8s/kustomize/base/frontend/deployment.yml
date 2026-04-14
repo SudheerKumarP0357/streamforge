@@ -4,12 +4,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sf-frontend
-  namespace: streamforge
   labels:
     app.kubernetes.io/name: frontend
     app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: frontend
-    azure.workload.identity/use: "true"
 spec:
   selector:
     matchLabels:
@@ -36,22 +34,9 @@ spec:
                       values:
                         - frontend
                 topologyKey: "kubernetes.io/hostname"
-      initContainers:
-        # InitContainer for Backend APi
-        - name: wait-for-backend-api
-          image: busybox:1.36
-          command:
-            - sh
-            - -c
-            - |
-              until   wget -qO- http://sf-api-svc:8080/healthz; do
-                echo "Waiting for Backend API..."
-                sleep 5
-              done
-              echo "Backend API is ready"
       containers:
         - name: frontend
-          image: acrstreamforgedevci.azurecr.io/streamforge/frontend:v1
+          image: ghcr.io/sudheerkumarp0357/streamforge/frontend:latest
           resources:
             limits:
               memory: "128Mi"

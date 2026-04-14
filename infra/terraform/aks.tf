@@ -161,12 +161,51 @@ module "sf_workload_identity_kv_reader" {
   scope                = azurerm_key_vault.main.id
 }
 
-
-resource "azurerm_kubernetes_cluster_extension" "flux" {
-  name           = "flux"
-  cluster_id     = azurerm_kubernetes_cluster.main.id
-  extension_type = "microsoft.flux"
+# Needed for Azure Load Balancer - Azure ALB Controller
+resource "azurerm_user_assigned_identity" "alb_uami" {
+  name                = "azure-alb-identity"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  tags                = var.tags
 }
+
+module "alb_reader_access_aks_mc" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Reader"
+}
+
+module "alb_appw_config_manager" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "AppGW for Containers Configuration Manager"
+}
+
+module "alb_network_contributor" {
+  source               = "./modules/role_assignments"
+  principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
+  scope                = azurerm_subnet.alb_subnet.id
+  principal_type       = "ServicePrincipal"
+  role_definition_name = "Network Contributor"
+}
+
+resource "azurerm_federated_identity_credential" "alb_fic" {
+  name                      = azurerm_user_assigned_identity.alb_uami.name
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
+  subject                   = "system:serviceaccount:azure-alb-system:alb-controller-sa"
+  user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
+}
+
+# resource "azurerm_kubernetes_cluster_extension" "flux" {
+#   name           = "flux"
+#   cluster_id     = azurerm_kubernetes_cluster.main.id
+#   extension_type = "microsoft.flux"
+# }
 
 
 # resource "azurerm_kubernetes_flux_configuration" "streamforge" {
@@ -197,47 +236,4 @@ resource "azurerm_kubernetes_cluster_extension" "flux" {
 #   depends_on = [
 #     azurerm_kubernetes_cluster_extension.example
 #   ]
-# }
-
-
-###### REMOVED SINCE WE ARE USING THE DEFAULT MANAGED IDENTITY CREATED BY AKS ADD-ON
-## the uami can be found in the aks managed resource group as applicationloadbalancer-<cluster-name>
-# # Needed for Azure Load Balancer - Azure ALB Controller
-# resource "azurerm_user_assigned_identity" "alb_uami" {
-#   name                = "azure-alb-identity"
-#   resource_group_name = azurerm_resource_group.main.name
-#   location            = azurerm_resource_group.main.location
-#   tags                = var.tags
-# }
-
-# module "alb_reader_access_aks_mc" {
-#   source               = "./modules/role_assignments"
-#   principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-#   scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
-#   principal_type       = "ServicePrincipal"
-#   role_definition_name = "Reader"
-# }
-
-# module "alb_appw_config_manager" {
-#   source               = "./modules/role_assignments"
-#   principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-#   scope                = azurerm_kubernetes_cluster.main.node_resource_group_id
-#   principal_type       = "ServicePrincipal"
-#   role_definition_name = "AppGW for Containers Configuration Manager"
-# }
-
-# module "alb_network_contributor" {
-#   source               = "./modules/role_assignments"
-#   principal_id         = azurerm_user_assigned_identity.alb_uami.principal_id
-#   scope                = azurerm_subnet.alb_subnet.id
-#   principal_type       = "ServicePrincipal"
-#   role_definition_name = "Network Contributor"
-# }
-
-# resource "azurerm_federated_identity_credential" "alb_fic" {
-#   name                      = azurerm_user_assigned_identity.alb_uami.name
-#   audience                  = ["api://AzureADTokenExchange"]
-#   issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
-#   subject                   = "system:serviceaccount:azure-alb-system:alb-controller-sa"
-#   user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
 # }
