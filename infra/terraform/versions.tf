@@ -12,14 +12,14 @@ terraform {
       source  = "hashicorp/http"
       version = "3.5.0"
     }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "3.1.1"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "3.0.1"
-    }
+    # helm = {
+    #   source  = "hashicorp/helm"
+    #   version = "3.1.1"
+    # }
+    # kubernetes = {
+    #   source  = "hashicorp/kubernetes"
+    #   version = "3.0.1"
+    # }
   }
 
   backend "azurerm" {}
@@ -44,18 +44,21 @@ provider "azurerm" {
   }
 }
 
-provider "helm" {
-  kubernetes = {
-    host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-    client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-    client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-  }
-}
+# provider "helm" {
+#   kubernetes = {
+#     host = azurerm_kubernetes_cluster.main.kube_config.0.host
 
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-}
+#     client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+#     client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+#     cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+#   }
+# }
+
+
+# provider "kubernetes" {
+#   host = azurerm_kubernetes_cluster.main.kube_config.0.host
+
+#   client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+#   client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+#   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+# }

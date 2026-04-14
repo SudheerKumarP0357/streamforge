@@ -201,76 +201,82 @@ resource "azurerm_federated_identity_credential" "alb_fic" {
   user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
 }
 
-resource "helm_release" "alb_controller" {
-  name      = "alb-controller"
-  namespace = "azure-alb-system"
-  version   = "1.9.13"
-  chart     = "oci://mcr.microsoft.com/application-lb/charts/alb-controller"
+# resource "helm_release" "alb_controller" {
+#   name      = "alb-controller"
+#   namespace = "azure-alb-system"
+#   version   = "1.9.13"
+#   chart     = "oci://mcr.microsoft.com/application-lb/charts/alb-controller"
 
-  create_namespace = true
+#   create_namespace = true
 
-  wait = true
+#   wait = true
 
-  set = [
-    {
-      name  = "albController.namespace"
-      value = "azure-alb-system"
-    },
-    {
-      name  = "albController.podIdentity.clientID"
-      value = azurerm_user_assigned_identity.alb_uami.client_id
-    }
-  ]
+#   set = [
+#     {
+#       name  = "albController.namespace"
+#       value = "azure-alb-system"
+#     },
+#     {
+#       name  = "albController.podIdentity.clientID"
+#       value = azurerm_user_assigned_identity.alb_uami.client_id
+#     }
+#   ]
 
-  depends_on = [
-    azurerm_kubernetes_cluster.main,
-    azurerm_user_assigned_identity.alb_uami,
-    module.alb_reader_access_aks_mc,
-    azurerm_federated_identity_credential.alb_fic,
-    module.alb_network_contributor,
-    module.alb_appw_config_manager
-  ]
-}
+#   depends_on = [
+#     azurerm_kubernetes_cluster.main,
+#     azurerm_user_assigned_identity.alb_uami,
+#     module.alb_reader_access_aks_mc,
+#     azurerm_federated_identity_credential.alb_fic,
+#     module.alb_network_contributor,
+#     module.alb_appw_config_manager
+#   ]
+# }
 
-resource "kubernetes_namespace_v1" "alb_infra" {
-  metadata {
-    name = "alb-infra"
-  }
-}
+# resource "kubernetes_namespace_v1" "alb_infra" {
+#   metadata {
+#     name = "alb-infra"
+#   }
+#   depends_on = [
+#     azurerm_kubernetes_cluster.main,
+#     helm_release.alb_controller
+#   ]
+# }
 
-resource "kubernetes_manifest" "application_load_balancer" {
-  manifest = {
-    "apiVersion" = "alb.networking.azure.io/v1"
-    "kind"       = "ApplicationLoadBalancer"
-    "metadata" = {
-      "name"      = "alb-infra"
-      "namespace" = kubernetes_namespace_v1.alb_infra.metadata[0].name
-    }
-    "spec" = {
-      "associations" = [
-        azurerm_subnet.alb_subnet.id
-      ]
-    }
-  }
-  depends_on = [
-    helm_release.alb_controller
-  ]
-  wait {
-    condition {
-      type   = "Accepted"
-      status = "True"
-    }
-    condition {
-      type   = "Deployment"
-      status = "True"
-    }
-  }
-  timeouts {
-    create = "15m"
-    update = "10m"
-    delete = "5m"
-  }
-}
+# resource "kubernetes_manifest" "application_load_balancer" {
+#   manifest = {
+#     "apiVersion" = "alb.networking.azure.io/v1"
+#     "kind"       = "ApplicationLoadBalancer"
+#     "metadata" = {
+#       "name"      = "alb-infra"
+#       "namespace" = kubernetes_namespace_v1.alb_infra.metadata[0].name
+#     }
+#     "spec" = {
+#       "associations" = [
+#         azurerm_subnet.alb_subnet.id
+#       ]
+#     }
+#   }
+
+#   wait {
+#     condition {
+#       type   = "Accepted"
+#       status = "True"
+#     }
+#     condition {
+#       type   = "Deployment"
+#       status = "True"
+#     }
+#   }
+#   timeouts {
+#     create = "15m"
+#     update = "10m"
+#     delete = "5m"
+#   }
+#   depends_on = [
+#     azurerm_kubernetes_cluster.main,
+#     helm_release.alb_controller
+#   ]
+# }
 
 # resource "azurerm_kubernetes_cluster_extension" "flux" {
 #   name           = "flux"
