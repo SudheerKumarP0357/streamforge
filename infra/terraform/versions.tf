@@ -12,6 +12,14 @@ terraform {
       source  = "hashicorp/http"
       version = "3.5.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "3.1.1"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "3.0.1"
+    }
   }
 
   backend "azurerm" {}
@@ -27,7 +35,7 @@ provider "azurerm" {
       purge_soft_deleted_secrets_on_destroy = true  # hard-delete secrets inside it
       recover_soft_deleted_keys             = false # don't auto-recover keys
       recover_soft_deleted_secrets          = false # don't auto-recover secrets
-      recover_soft_deleted_key_vaults       = true
+      recover_soft_deleted_key_vaults       = false # don't auto-recover key vaults
     }
 
     postgresql_flexible_server {
@@ -36,3 +44,18 @@ provider "azurerm" {
   }
 }
 
+provider "helm" {
+  kubernetes = {
+    host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
+    client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+    client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+  }
+}
+
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+}

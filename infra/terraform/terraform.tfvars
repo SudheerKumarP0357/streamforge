@@ -37,3 +37,9 @@ aks_max_system_pool_node_count   = 1
 aks_min_system_pool_node_count   = 1
 aks_systempool_max_pods_per_node = 250
 kubectl_version                  = "1.35"
+
+
+# cosmos_administrator_password   = "Streamforge0357"
+# postgres_administrator_password = "Streamforge0357"
+# jwt_secret                      = "super-secret-streamforge-jwt-0357"
+# public_key_openssh              = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFmGHZhEziK/r7s9JpptLN8ioFa/Gw5ftULyQhVwkTtd sudheer@streamline424"
