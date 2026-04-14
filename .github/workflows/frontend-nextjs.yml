@@ -93,7 +93,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
             ${{ secrets.ACR_LOGIN_SERVER }}/${{ github.event.repository.name }}/${{ env.ARTIFACT_NAME }}
           tags: |
-            type=sha
+            type=sha,format=long
             type=ref,event=branch
             type=raw,value=latest
 
