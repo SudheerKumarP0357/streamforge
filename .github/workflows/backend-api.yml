@@ -131,7 +131,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Update image tag in kustomize
-        run: ./scripts/update-image-tag.sh -s ${ARTIFACT_NAME} -t ${{ github.sha }}
+        run: ./scripts/update-image-tag.sh -s ${{ env.ARTIFACT_NAME }} -t ${{ github.sha }}
 
       - name: Create Pull Request
         env:
