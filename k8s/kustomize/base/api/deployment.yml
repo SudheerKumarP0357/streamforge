@@ -4,7 +4,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sf-api
-  namespace: streamforge
   labels:
     app.kubernetes.io/name: api
     app.kubernetes.io/part-of: streamforge-application
@@ -112,7 +111,7 @@ spec:
 
       containers:
         - name: api
-          image: acrstreamforgedevci.azurecr.io/streamforge/api:v1
+          image: ghcr.io/sudheerkumarp0357/streamforge/api:latest
           resources:
             limits:
               memory: "128Mi"

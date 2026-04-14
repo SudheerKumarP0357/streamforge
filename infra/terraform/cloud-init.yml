@@ -10,22 +10,25 @@ packages:
   - unzip
   - git
   - lsb-release
+  - wget
 
 runcmd:
   # kubectl install
   - mkdir -p -m 755 /etc/apt/keyrings
-  - curl -fsSL https://pkgs.k8s.io/core:/stable:/v{kubectl_version}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  - curl -fsSL https://pkgs.k8s.io/core:/stable:/$(curl -L -s https://dl.k8s.io/release/stable.txt)/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   - chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-  - echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{kubectl_version}/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  - echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$(curl -L -s https://dl.k8s.io/release/stable.txt)/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
   - sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+
+  # terraform install
+  - wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
+  - chmod 644 /etc/apt/keyrings/hashicorp-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+  # az-cli install
+  - curl -sLS https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/microsoft.gpg
+  - chmod 644 /etc/apt/keyrings/microsoft.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/azure-cli.list
+
   - sudo apt-get update
-  - sudo apt-get install -y kubectl
-
-  # Az cli install
-  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-
-  # Login with az-cli
-  - az login --identity
-
-  # Get AKS credentials
-  - az aks get-credentials -n {aks_cluster_name} -g {resource_group_name}
+  - sudo apt-get install -y kubectl terraform azure-cli

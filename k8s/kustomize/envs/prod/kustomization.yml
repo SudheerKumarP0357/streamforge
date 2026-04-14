@@ -1,22 +1,31 @@
----
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
-  - ../../base/
-
-namespace: streamforge-dev
-
+- ../../base/
+namespace: streamforge-prod
 patches:
-  - path: namespace-patch.yml
-    target:
-      version: v1
-      kind: Namespace
-      name: streamforge
-      labelSelector: "app.kubernetes.io/name=streamforge"
+- path: patch.yml
+  target:
+    kind: Namespace
+    labelSelector: app.kubernetes.io/name=streamforge
+    name: streamforge
+    version: v1
 
 replicas:
-  - name: sf-api
-    count: 1
-  - name: sf-frontend
-    count: 1
+- count: 1
+  name: sf-api
+- count: 1
+  name: sf-frontend
+- count: 1
+  name: sf-transcoder
+
+images:
+- name: ghcr.io/sudheerkumarp0357/streamforge/api
+  newName: ghcr.io/sudheerkumarp0357/streamforge/api
+  newTag: sha-api
+- name: ghcr.io/sudheerkumarp0357/streamforge/frontend
+  newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
+  newTag: sha-frontend
+- name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+  newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+  newTag: sha-transcoder
