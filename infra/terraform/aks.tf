@@ -20,7 +20,7 @@ resource "azurerm_kubernetes_cluster" "main" {
   azure_policy_enabled                = false
   local_account_disabled              = false
 
-  private_dns_zone_id = azurerm_private_dns_zone.aks.id
+  # private_dns_zone_id = azurerm_private_dns_zone.aks.id
 
   default_node_pool {
     auto_scaling_enabled = true
