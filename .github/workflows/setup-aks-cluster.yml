@@ -33,7 +33,7 @@ env:
   ARM_USE_OIDC: true
 
 permissions:
-  id-token: read
+  id-token: write
 
 jobs:
   setup-alb-controller:
