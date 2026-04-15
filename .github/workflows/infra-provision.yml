@@ -1,4 +1,4 @@
-name: Terraform - Azure
+name: Infra Provision - Azure
 on:
   workflow_dispatch:
   push:

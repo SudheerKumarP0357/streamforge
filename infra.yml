@@ -1,0 +1,107 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: cert-manager
+    app.kubernetes.io/part-of: streamforge-infra
+  name: stremforge-tls-cert
+  namespace: streamforge
+spec:
+  commonName: "*.sudheer.fun"
+  dnsNames:
+    - sudheer.fun
+    - "*.sudheer.fun"
+  duration: 2160h
+  isCA: false
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: cloudflare-cluster-issuer
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  renewBefore: 360h
+  secretName: stremforge-tls-secret
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  labels:
+    app.kubernetes.io/component: cert-manager
+    app.kubernetes.io/part-of: streamforge-infra
+  name: cloudflare-cluster-issuer
+  namespace: streamforge-dev
+spec:
+  acme:
+    email: sudheerkumarp0357@gmail.com
+    privateKeySecretRef:
+      name: cloudflare-cluster-issuer-key
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              key: api-token
+              name: cloudflare-api-token
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  annotations:
+    alb.networking.azure.io/alb-name: alb-infra
+    alb.networking.azure.io/alb-namespace: azure-alb-system
+  labels:
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: streamforge-infra
+  name: streamforge-gateway
+  namespace: streamforge
+spec:
+  gatewayClassName: azure-alb-external
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: "*.sudheer.fun"
+      name: https-listener
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: streamforge-tls-secret
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: "*.sudheer.fun"
+      name: http-listener
+      port: 80
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: streamforge-infra
+  name: streamforge-httproute
+  namespace: streamforge-dev
+spec:
+  hostnames:
+    - sudheer.fun
+    - "*.sudheer.fun"
+  parentRefs:
+    - name: streamforge-gateway
+      namespace: streamforge-dev
+      sectionName: http-listener
+  rules:
+    - filters:
+        - requestRedirect:
+            scheme: https
+            statusCode: 301
+          type: RequestRedirect

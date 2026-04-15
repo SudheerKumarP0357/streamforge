@@ -1,0 +1,23 @@
+---
+# ClusterIssuer — cluster-scoped, no namespace field
+# Uses Cloudflare DNS01 challenge to prove domain ownership
+# Works across ALL namespaces — certificates in any namespace can reference this
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cloudflare-cluster-issuer
+  labels:
+    app.kubernetes.io/part-of: streamforge-infra
+    app.kubernetes.io/component: cert-manager
+spec:
+  acme:
+    email: PLACEHOLDER_EMAIL
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: cloudflare-cluster-issuer-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token

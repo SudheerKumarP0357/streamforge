@@ -1,0 +1,77 @@
+name: Setup AKS Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      aks_cluster_name:
+        description: "AKS Cluster Name"
+        required: true
+        type: string
+      resource_group_name:
+        description: "Resource Group Name"
+        required: true
+        type: string
+      alb_client_id:
+        description: "Azure LoadBalancer UMAI Client id"
+        required: true
+        type: string
+      alb_controller_namespace:
+        description: "Azure alb-controller namespace"
+        required: true
+        type: string
+        default: azure-alb-system
+      alb_subnet_id:
+        description: "Azure alb-controller subnet id"
+        required: true
+        type: string
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
+
+permissions:
+  id-token: read
+
+jobs:
+  setup-alb-controller:
+    name: Install ALB Controller
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Get AKS Cluster Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ github.event.inputs.resource_group_name }} \
+            --name ${{ github.event.inputs.aks_cluster_name }} \
+            --overwrite-existing && \
+          kubectl cluster-info
+
+      - name: Install alb-controller using Helm
+        run: |
+          helm upgrade alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+          --namespace ${{ github.event.inputs.alb_controller_namespace }} \
+          --create-namespace \
+          --version 1.9.13 \
+          --set albController.namespace=${{ github.event.alb_controller_namespace.alb_controller_name }} \
+          --set albController.podIdentity.clientID=${{ github.event.inputs.alb_client_id }}
+
+      - name: Wait for alb-controller Pods Ready
+        run: kubectl wait pod --selector app=alb-controller -n ${{ github.event.inputs.alb_controller_namespace }} --for=condition=Ready --timeout=600s
+
+      - name: Verify alb-controller is running
+        run: kubectl get pods -n ${{ github.event.inputs.alb_controller_namespace }}
+
+      - name: Wait for GatewayClass to be accepted
+        run: kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s
+
+      - name: Verify GatewayClass azure-alb-external is installed
+        run: kubectl get gatewayclass azure-alb-external -o yaml

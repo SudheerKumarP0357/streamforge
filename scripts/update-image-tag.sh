@@ -10,7 +10,7 @@ set -euo pipefail
 # ─── Configuration ────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
-KUSTOMIZE_BASE_PATH="${REPO_ROOT}/k8s/kustomize/envs"
+KUSTOMIZE_BASE_PATH="${REPO_ROOT}/k8s/kustomize/apps/envs"
 DEFAULT_ENV="dev"
 
 REGISTRY="ghcr.io"

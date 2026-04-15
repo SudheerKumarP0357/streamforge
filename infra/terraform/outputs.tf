@@ -54,10 +54,17 @@ output "workload_identity_client_id" {
   value = azurerm_user_assigned_identity.sf_workload_identity.client_id
 }
 
-output "jump_server_user_name" {
-  value = azurerm_linux_virtual_machine.jump_server.admin_username
-}
+# output "jump_server_user_name" {
+#   value = azurerm_linux_virtual_machine.jump_server.admin_username
+# }
 
-output "jump_server_pip" {
-  value = azurerm_linux_virtual_machine.jump_server.public_ip_address
+# output "jump_server_pip" {
+#   value = azurerm_linux_virtual_machine.jump_server.public_ip_address
+# }
+
+output "alb_subnet_id" {
+  value = azurerm_subnet.alb_subnet
+}
+output "azure_alb_identity" {
+  value = azurerm_user_assigned_identity.alb_uami.client_id
 }
