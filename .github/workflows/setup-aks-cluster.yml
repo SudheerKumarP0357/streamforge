@@ -61,7 +61,7 @@ jobs:
           --namespace ${{ github.event.inputs.alb_controller_namespace }} \
           --create-namespace \
           --version 1.9.13 \
-          --set albController.namespace=${{ github.event.alb_controller_namespace.alb_controller_name }} \
+          --set albController.namespace=${{ github.event.inputs.alb_controller_namespace }} \
           --set albController.podIdentity.clientID=${{ github.event.inputs.alb_client_id }}
 
       - name: Wait for alb-controller Pods Ready
