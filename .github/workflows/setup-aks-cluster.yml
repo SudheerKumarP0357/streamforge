@@ -57,7 +57,7 @@ jobs:
 
       - name: Install alb-controller using Helm
         run: |
-          helm upgrade alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+          helm install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
           --namespace ${{ github.event.inputs.alb_controller_namespace }} \
           --create-namespace \
           --version 1.9.13 \
