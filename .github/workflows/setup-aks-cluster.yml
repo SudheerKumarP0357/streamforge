@@ -57,12 +57,20 @@ jobs:
 
       - name: Install alb-controller using Helm
         run: |
-          helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
-          --namespace ${{ github.event.inputs.alb_controller_namespace }} \
-          --create-namespace \
-          --version 1.9.13 \
-          --set albController.namespace=${{ github.event.inputs.alb_controller_namespace }} \
-          --set albController.podIdentity.clientID=${{ github.event.inputs.alb_client_id }}
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
+
+          if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then  
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+            --namespace ${{ github.event.inputs.alb_controller_namespace }} \
+            --create-namespace \
+            --version 1.9.13 \
+            --set albController.namespace=${{ github.event.inputs.alb_controller_namespace }} \
+            --set albController.podIdentity.clientID=${{ github.event.inputs.alb_client_id }}
+          fi
 
       - name: Wait for alb-controller Pods Ready
         run: kubectl wait pod --selector app=alb-controller -n ${{ github.event.inputs.alb_controller_namespace }} --for=condition=Ready --timeout=600s
@@ -94,3 +102,45 @@ jobs:
 
       - name: Verify ApplicationLoadBalancer is running
         run: kubectl get applicationloadbalancer alb-infra -n ${{ github.event.inputs.alb_controller_namespace }} -o yaml
+
+  cert-manager:
+    name: Setup Cert Manager
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Get AKS Cluster Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ github.event.inputs.resource_group_name }} \
+            --name ${{ github.event.inputs.aks_cluster_name }} \
+            --overwrite-existing && \
+          kubectl cluster-info
+
+      - name: Install cert-manager using Helm
+        run: |
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(helm list -n cert-manager --filter "^cert-manager$" -o json | jq -r '.[0].chart')
+
+          if [[ "$CURRENT_VERSION" == "cert-manager-v1.20.2" ]]; then  
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            helm upgrade --install \
+              cert-manager oci://quay.io/jetstack/charts/cert-manager \
+              --version v1.20.2 \
+              --namespace cert-manager \
+              --create-namespace \
+              --set crds.enabled=true
+          fi
+
+      - name: Wait for the Cert Manager resources Ready
+        run: kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector helm.sh/chart=cert-manager-v1.20.2 -n cert-manager --for=condition=Ready --timeout=600s
+
+      - name: Verify Cert Manager pods
+        run: kubectl get pods -n cert-manager
