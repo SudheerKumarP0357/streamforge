@@ -28,7 +28,7 @@ images:
   newTag: sha-c54dea49e5eb2eebe5147661d618897e4ad5e6a7
 - name: ghcr.io/sudheerkumarp0357/streamforge/frontend
   newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
-  newTag: sha-c54dea49e5eb2eebe5147661d618897e4ad5e6a7
+  newTag: sha-5d59aee6daf7bc44bd8d65b722174f2891ab84ac
 - name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
   newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
   newTag: sha-c54dea49e5eb2eebe5147661d618897e4ad5e6a7
