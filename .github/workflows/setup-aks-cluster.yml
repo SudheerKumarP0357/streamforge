@@ -57,7 +57,7 @@ jobs:
 
       - name: Install alb-controller using Helm
         run: |
-          helm install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+          helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
           --namespace ${{ github.event.inputs.alb_controller_namespace }} \
           --create-namespace \
           --version 1.9.13 \
@@ -75,3 +75,22 @@ jobs:
 
       - name: Verify GatewayClass azure-alb-external is installed
         run: kubectl get gatewayclass azure-alb-external -o yaml
+
+      - name: Create ApplicationLoadBalancer Kubernetes Resource
+        run: |
+          kubectl apply -f - <<EOF
+          apiVersion: alb.networking.azure.io/v1
+          kind: ApplicationLoadBalancer
+          metadata:
+            name: alb-infra
+            namespace: ${{ github.event.inputs.alb_controller_namespace }}
+          spec:
+            associations:
+            - ${{ github.event.inputs.alb_subnet_id }}
+          EOF
+
+      - name: Wait for the ApplicationLoadBalancer Deployment
+        run: kubectl wait --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' applicationloadbalancer/alb-infra -n ${{ github.event.inputs.alb_controller_namespace }} --timeout=600s
+
+      - name: Verify ApplicationLoadBalancer is running
+        run: kubectl get applicationloadbalancer alb-infra -n ${{ github.event.inputs.alb_controller_namespace }} -o yaml
