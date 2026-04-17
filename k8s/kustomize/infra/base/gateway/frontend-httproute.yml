@@ -1,19 +1,19 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: frontend-httproute
-  labels:
-    app.kubernetes.io/part-of: streamforge-infra
-    app.kubernetes.io/component: gateway
+  name: frontend-https-httproute
+  namespace: streamforge
 spec:
   parentRefs:
     - name: streamforge-gateway
-      namespace: streamforge-infra-dev
       sectionName: https-listener
   hostnames:
-    - "sudheer.fun"
     - "*.sudheer.fun"
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: sf-frontend-svc
           port: 80

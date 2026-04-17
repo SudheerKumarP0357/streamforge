@@ -42,9 +42,9 @@ output "cosmos_cluster_connection_string" {
   sensitive = true
 }
 
-output "acr_login_server" {
-  value = azurerm_container_registry.acr.login_server
-}
+# output "acr_login_server" {
+#   value = azurerm_container_registry.acr.login_server
+# }
 
 output "aks_cluster_name" {
   value = azurerm_kubernetes_cluster.main.name
@@ -63,7 +63,7 @@ output "workload_identity_client_id" {
 # }
 
 output "alb_subnet_id" {
-  value = azurerm_subnet.alb_subnet
+  value = azurerm_subnet.alb_subnet.id
 }
 output "azure_alb_identity" {
   value = azurerm_user_assigned_identity.alb_uami.client_id

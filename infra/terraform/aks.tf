@@ -150,7 +150,7 @@ resource "azurerm_federated_identity_credential" "sf_workload_identity_fic" {
   audience                  = ["api://AzureADTokenExchange"]
   issuer                    = azurerm_kubernetes_cluster.main.oidc_issuer_url
   user_assigned_identity_id = azurerm_user_assigned_identity.sf_workload_identity.id
-  subject                   = "system:serviceaccount:streamforge:sf-workload-sa"
+  subject                   = "system:serviceaccount:streamforge-${var.environment_name}:sf-workload-sa"
 }
 
 module "sf_workload_identity_kv_reader" {
@@ -201,116 +201,18 @@ resource "azurerm_federated_identity_credential" "alb_fic" {
   user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
 }
 
-# resource "helm_release" "alb_controller" {
-#   name      = "alb-controller"
-#   namespace = "azure-alb-system"
-#   version   = "1.9.13"
-#   chart     = "oci://mcr.microsoft.com/application-lb/charts/alb-controller"
+resource "azurerm_kubernetes_cluster_node_pool" "node_pool_1" {
+  name                  = "nodepool1"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
+  vm_size               = "Standard_D2as_v4"
+  node_count            = 1
+  os_sku                = "Ubuntu"
+  vnet_subnet_id        = azurerm_subnet.aks_subnet.id
+  os_disk_size_gb       = 128
 
-#   create_namespace = true
-
-#   wait = true
-
-#   set = [
-#     {
-#       name  = "albController.namespace"
-#       value = "azure-alb-system"
-#     },
-#     {
-#       name  = "albController.podIdentity.clientID"
-#       value = azurerm_user_assigned_identity.alb_uami.client_id
-#     }
-#   ]
-
-#   depends_on = [
-#     azurerm_kubernetes_cluster.main,
-#     azurerm_user_assigned_identity.alb_uami,
-#     module.alb_reader_access_aks_mc,
-#     azurerm_federated_identity_credential.alb_fic,
-#     module.alb_network_contributor,
-#     module.alb_appw_config_manager
-#   ]
-# }
-
-# resource "kubernetes_namespace_v1" "alb_infra" {
-#   metadata {
-#     name = "alb-infra"
-#   }
-#   depends_on = [
-#     azurerm_kubernetes_cluster.main,
-#     helm_release.alb_controller
-#   ]
-# }
-
-# resource "kubernetes_manifest" "application_load_balancer" {
-#   manifest = {
-#     "apiVersion" = "alb.networking.azure.io/v1"
-#     "kind"       = "ApplicationLoadBalancer"
-#     "metadata" = {
-#       "name"      = "alb-infra"
-#       "namespace" = kubernetes_namespace_v1.alb_infra.metadata[0].name
-#     }
-#     "spec" = {
-#       "associations" = [
-#         azurerm_subnet.alb_subnet.id
-#       ]
-#     }
-#   }
-
-#   wait {
-#     condition {
-#       type   = "Accepted"
-#       status = "True"
-#     }
-#     condition {
-#       type   = "Deployment"
-#       status = "True"
-#     }
-#   }
-#   timeouts {
-#     create = "15m"
-#     update = "10m"
-#     delete = "5m"
-#   }
-#   depends_on = [
-#     azurerm_kubernetes_cluster.main,
-#     helm_release.alb_controller
-#   ]
-# }
-
-# resource "azurerm_kubernetes_cluster_extension" "flux" {
-#   name           = "flux"
-#   cluster_id     = azurerm_kubernetes_cluster.main.id
-#   extension_type = "microsoft.flux"
-# }
-
-
-# resource "azurerm_kubernetes_flux_configuration" "streamforge" {
-#   name       = "streamforge"
-#   cluster_id = azurerm_kubernetes_cluster.main.id
-#   namespace  = "streamforge"
-
-#   git_repository {
-#     url             = "https://github.com/SudheerKumarP0357/streamforge"
-#     reference_type  = "branch"
-#     reference_value = "main"
-#   }
-
-#   kustomizations {
-#     name = "kustomization-1"
-
-#     post_build {
-#       substitute = {
-#         example_var = "substitute_with_this"
-#       }
-#       substitute_from {
-#         kind = "ConfigMap"
-#         name = "example-configmap"
-#       }
-#     }
-#   }
-
-#   depends_on = [
-#     azurerm_kubernetes_cluster_extension.example
-#   ]
-# }
+  lifecycle {
+    ignore_changes = [
+      upgrade_settings
+    ]
+  }
+}

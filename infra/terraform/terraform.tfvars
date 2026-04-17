@@ -1,5 +1,5 @@
 application_name            = "streamforge"
-environment_name            = "prod"
+environment_name            = "dev"
 primary_location            = "centralindia"
 primary_location_short_name = "ci"
 vnet_app_addr_space         = "10.10.0.0/16"
@@ -39,7 +39,7 @@ aks_systempool_max_pods_per_node = 250
 kubectl_version                  = "1.35"
 
 
-# cosmos_administrator_password   = "Streamforge0357"
-# postgres_administrator_password = "Streamforge0357"
-# jwt_secret                      = "super-secret-streamforge-jwt-0357"
-# public_key_openssh              = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFmGHZhEziK/r7s9JpptLN8ioFa/Gw5ftULyQhVwkTtd sudheer@streamline424"
+cosmos_administrator_password   = "Streamforge0357"
+postgres_administrator_password = "Streamforge0357"
+jwt_secret                      = "super-secret-streamforge-jwt-0357"
+public_key_openssh              = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFmGHZhEziK/r7s9JpptLN8ioFa/Gw5ftULyQhVwkTtd sudheer@streamline424"

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infra-config
+  annotations:
+    # This prevents the ConfigMap from being deployed
+    config.kubernetes.io/local-config: "true"
+data:
+  NAMESPACE: "streamforge-dev"
+  KEY_VAULT_NAME: "kv-streamforgedevci"
+  TEANNT_ID: "92768f97-e40a-49b6-8fd5-a20497464fdc"
+  CLIENT_ID: "7fa43c11-b559-48fe-8504-f4d7fbd0c049"
+  RABBITMQ_DEFAULT_USER: "Streamforge"
+  POSTGRES_HOST: "psqlstreamforgedevci.postgres.database.azure.com"
+  POSTGRES_USER: "streamforge"
+  POSTGRES_DB: "streamforge"
+  REDIS_HOST: "amrstreamforgedev.centralindia.redis.azure.net"
+  REDIS_PORT: "10000"
+  REDIS_URL: "rediss://amrstreamforgedev.centralindia.redis.azure.net:10000"
+  AZURE_STORAGE_ACCOUNT_NAME: "streamforgedevci"
+  AZURE_STORAGE_ENDPOINT: "https://streamforgedevci.blob.core.windows.net/"

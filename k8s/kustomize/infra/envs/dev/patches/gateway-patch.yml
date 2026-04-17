@@ -1,31 +1,9 @@
 ---
-# Patches ALB annotations and hostname for dev environment
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: streamforge-gateway
-  annotations:
-    alb.networking.azure.io/alb-namespace: streamforge-infra-dev
-    alb.networking.azure.io/alb-name: alb-streamforge-dev
-spec:
-  listeners:
-    - name: https-listener
-      port: 443
-      protocol: HTTPS
-      hostname: "*.sudheer.fun"
-      allowedRoutes:
-        namespaces:
-          from: All
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: streamforge-tls-secret
-    - name: http-listener
-      port: 80
-      protocol: HTTP
-      hostname: "*.sudheer.fun"
-      allowedRoutes:
-        namespaces:
-          from: All
+- op: replace
+  path: /spec/listeners/0/hostname
+  value: "*.sudheer.fun"
+
+- op: replace
+  path: /spec/listeners/1/hostname
+  value: "*.sudheer.fun"
+---

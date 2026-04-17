@@ -14,7 +14,17 @@ resource "azurerm_storage_account" "main" {
   public_network_access_enabled   = false
   local_user_enabled              = false
 
+
+
   blob_properties {
+
+    cors_rule {
+      allowed_origins    = ["https://streamforge.sudheer.fun"]
+      allowed_methods    = ["GET"]
+      allowed_headers    = ["*"]
+      exposed_headers    = ["*"]
+      max_age_in_seconds = 84600
+    }
 
     delete_retention_policy {
       days                     = "7"

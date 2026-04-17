@@ -44,6 +44,8 @@ provider "azurerm" {
   }
 }
 
+# COMMENTED SINCE HELM & KUBERNETES ARE NOT SUPPORTED UNLESS CLUSTER AND KUBE_CONFIG IS NOT AVAILABLE
+# USING DIFFERENT PIPELINE TO SETUP/PREPARE THE CLUSTER
 # provider "helm" {
 #   kubernetes = {
 #     host = azurerm_kubernetes_cluster.main.kube_config.0.host

@@ -1,4 +1,4 @@
-name: Setup AKS Cluster
+name: Infra - AKS Setup
 
 on:
   workflow_dispatch:
@@ -73,13 +73,16 @@ jobs:
           fi
 
       - name: Wait for alb-controller Pods Ready
-        run: kubectl wait pod --selector app=alb-controller -n ${{ github.event.inputs.alb_controller_namespace }} --for=condition=Ready --timeout=600s
+        run: kubectl wait pod --selector app=alb-controller -n ${{
+          github.event.inputs.alb_controller_namespace }} --for=condition=Ready
+          --timeout=600s
 
       - name: Verify alb-controller is running
         run: kubectl get pods -n ${{ github.event.inputs.alb_controller_namespace }}
 
       - name: Wait for GatewayClass to be accepted
-        run: kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s
+        run: kubectl wait gatewayclass azure-alb-external --for=condition=Accepted
+          --timeout=600s
 
       - name: Verify GatewayClass azure-alb-external is installed
         run: kubectl get gatewayclass azure-alb-external -o yaml
@@ -98,10 +101,14 @@ jobs:
           EOF
 
       - name: Wait for the ApplicationLoadBalancer Deployment
-        run: kubectl wait --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' applicationloadbalancer/alb-infra -n ${{ github.event.inputs.alb_controller_namespace }} --timeout=600s
+        run: kubectl wait
+          --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready'
+          applicationloadbalancer/alb-infra -n ${{
+          github.event.inputs.alb_controller_namespace }} --timeout=600s
 
       - name: Verify ApplicationLoadBalancer is running
-        run: kubectl get applicationloadbalancer alb-infra -n ${{ github.event.inputs.alb_controller_namespace }} -o yaml
+        run: kubectl get applicationloadbalancer alb-infra -n ${{
+          github.event.inputs.alb_controller_namespace }} -o yaml
 
   cert-manager:
     name: Setup Cert Manager
@@ -140,7 +147,9 @@ jobs:
           fi
 
       - name: Wait for the Cert Manager resources Ready
-        run: kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector helm.sh/chart=cert-manager-v1.20.2 -n cert-manager --for=condition=Ready --timeout=600s
+        run: kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector
+          helm.sh/chart=cert-manager-v1.20.2 -n cert-manager
+          --for=condition=Ready --timeout=600s
 
       - name: Verify Cert Manager pods
         run: kubectl get pods -n cert-manager

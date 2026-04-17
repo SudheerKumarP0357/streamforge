@@ -1,33 +1,25 @@
----
-# Certificate — namespaced, must live in same namespace as the Gateway
-# cert-manager will create the TLS secret in this same namespace
-# The secret name is referenced by the Gateway listener
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: stremforge-tls-cert
+  name: streamforge-tls-cert
   labels:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: cert-manager
 spec:
-  secretName: stremforge-tls-secret
+  secretName: streamforge-tls-secret
   privateKey:
     algorithm: RSA
     size: 2048
-
   duration: 2160h
   renewBefore: 360h
-
   isCA: false
   usages:
     - server auth
     - digital signature
     - key encipherment
-
-  commonName: "*.sudheer.fun"
+  commonName: placeholder
   dnsNames:
-    - "sudheer.fun"
-    - "*.sudheer.fun"
+    - placeholder
   issuerRef:
     name: cloudflare-cluster-issuer
     kind: ClusterIssuer

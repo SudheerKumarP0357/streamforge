@@ -26,7 +26,7 @@ patches:
       kind: Certificate
       name: streamforge-tls-cert
 
-  # ── Gateway: hostname + ALB annotations ───────────────────────────────────
+  # ── gateway: Hostnames ─────────────────────────────────────────────────────
   - path: patches/gateway-patch.yml
     target:
       group: gateway.networking.k8s.io
@@ -34,18 +34,10 @@ patches:
       kind: Gateway
       name: streamforge-gateway
 
-  # ── HTTPRoute: hostnames ───────────────────────────────────────────────────
+  # ── httpRoute: Hostnames ─────────────────────────────────────────────────────
   - path: patches/httproute-patch.yml
     target:
       group: gateway.networking.k8s.io
       version: v1
       kind: HTTPRoute
-      name: http-to-https-redirect
-
-  # ── Frontend HTTPRoute: hostnames ───────────────────────────────────────────
-  - path: patches/frotend-httproute-patch.yml
-    target:
-      group: gateway.networking.k8s.io
-      version: v1
-      kind: HTTPRoute
-      name: frontend-httproute
+      name: httproute-redirect-http-to-https

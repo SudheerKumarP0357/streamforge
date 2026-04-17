@@ -1,7 +1,3 @@
----
-# Gateway — namespaced, lives in the infra namespace
-# Azure ALB controller provisions a public IP for this Gateway
-# TLS is terminated here using the cert-manager issued secret
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -11,23 +7,27 @@ metadata:
     app.kubernetes.io/component: gateway
   annotations:
     alb.networking.azure.io/alb-namespace: azure-alb-system
-    alb.networking.azure.io/alb-name: azure-alb-system
-
+    alb.networking.azure.io/alb-name: alb-infra
 spec:
   gatewayClassName: azure-alb-external
   listeners:
     - name: https-listener
       port: 443
       protocol: HTTPS
-      hostnames:
-        - "sudheer.fun"
-        - "*.sudheer.fun"
+      hostname: "*.sudheer.fun"
       allowedRoutes:
         namespaces:
-          from: All
+          from: Same
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
             group: ""
-            name: stremforge-tls-secret
+            name: streamforge-tls-secret
+    - name: http-listener
+      port: 80
+      protocol: HTTP
+      hostname: "*.sudheer.fun"
+      allowedRoutes:
+        namespaces:
+          from: Same

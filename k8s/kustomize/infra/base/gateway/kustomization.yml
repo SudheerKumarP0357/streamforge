@@ -4,3 +4,5 @@ kind: Kustomization
 resources:
   - gateway.yml
   - httproute.yml
+  - frontend-httproute.yml
+  - alb-frontend-health-check-policy.yml

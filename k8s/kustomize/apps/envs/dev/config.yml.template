@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infra-config
+  annotations:
+    # This prevents the ConfigMap from being deployed
+    config.kubernetes.io/local-config: "true"
+data:
+  NAMESPACE: "${NAMESPACE}"
+  KEY_VAULT_NAME: "${KEY_VAULT_NAME}"
+  TEANNT_ID: "${TEANNT_ID}"
+  CLIENT_ID: "${CLIENT_ID}"
+  RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER}"
+  POSTGRES_HOST: "${POSTGRES_HOST}"
+  POSTGRES_USER: "${POSTGRES_USER}"
+  POSTGRES_DB: "${POSTGRES_DB}"
+  REDIS_HOST: "${REDIS_HOST}"
+  REDIS_PORT: "${REDIS_PORT}"
+  REDIS_URL: "${REDIS_URL}"
+  AZURE_STORAGE_ACCOUNT_NAME: "${AZURE_STORAGE_ACCOUNT_NAME}"
+  AZURE_STORAGE_ENDPOINT: "${AZURE_STORAGE_ENDPOINT}"

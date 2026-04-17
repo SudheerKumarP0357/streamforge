@@ -22,6 +22,6 @@ data:
   COSMOS_DATABASE: streamforge
   JWT_EXPIRY_HOURS: "24"
   REFRESH_TOKEN_EXPIRY_DAYS: "7"
-  CORS_ALLOWED_ORIGIN: http://streamforge.sudheer.fun/
+  CORS_ALLOWED_ORIGIN: https://streamforge.sudheer.fun/
   FFMPEG_PATH: /usr/bin/ffmpeg
   TEMP_DIR: /tmp
