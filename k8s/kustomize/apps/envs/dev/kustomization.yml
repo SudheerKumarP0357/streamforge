@@ -2,190 +2,190 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base/
-  - config.yml
+- ../../base/
+- config.yml
 
 namespace: streamforge-dev
 
 replicas:
-  - count: 1
-    name: sf-api
-  - count: 1
-    name: sf-frontend
-  - count: 1
-    name: sf-transcoder
+- count: 1
+  name: sf-api
+- count: 1
+  name: sf-frontend
+- count: 1
+  name: sf-transcoder
 
 images:
-  - name: ghcr.io/sudheerkumarp0357/streamforge/api
-    newName: ghcr.io/sudheerkumarp0357/streamforge/api
-    newTag: latest
-  - name: ghcr.io/sudheerkumarp0357/streamforge/frontend
-    newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
-    newTag: latest
-  - name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
-    newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
-    newTag: latest
+- name: ghcr.io/sudheerkumarp0357/streamforge/api
+  newName: ghcr.io/sudheerkumarp0357/streamforge/api
+  newTag: latest
+- name: ghcr.io/sudheerkumarp0357/streamforge/frontend
+  newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
+  newTag: latest
+- name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+  newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+  newTag: sha-f98e7383c9fc89c2d59aac96603cb8ccf6c5c501
 
-replacements:
   # Replace namespace
-  - source:
-      kind: ConfigMap
-      name: infra-config
-      fieldPath: data.NAMESPACE
-    targets:
-      - select:
-          kind: Namespace
-          version: v1
-          name: streamforge
-        fieldPaths:
-          - metadata.name
 
   # Replace client ID in the Service Account required for KeyVaultAuth
-  - source:
-      kind: ConfigMap
-      name: infra-config
-      fieldPath: data.CLIENT_ID
-    targets:
-      - select:
-          kind: ServiceAccount
-          version: v1
-          name: sf-workload-sa
-        fieldPaths:
-          - metadata.annotations.[azure.workload.identity/client-id]
   # Replace clientId, keyvaultName and TenantId for SecretProviderClass using Azure KV CSI
-  - source:
-      kind: ConfigMap
-      name: infra-config
-      fieldPath: data.CLIENT_ID
-    targets:
-      - select:
-          kind: SecretProviderClass
-          group: secrets-store.csi.x-k8s.io
-          version: v1
-          name: azure-kv-sf
-        fieldPaths:
-          - spec.parameters.clientID
-  - source:
-      kind: ConfigMap
-      name: infra-config
-      fieldPath: data.TEANNT_ID
-    targets:
-      - select:
-          kind: SecretProviderClass
-          group: secrets-store.csi.x-k8s.io
-          version: v1
-          name: azure-kv-sf
-        fieldPaths:
-          - spec.parameters.tenantID
-  - source:
-      kind: ConfigMap
-      name: infra-config
-      fieldPath: data.KEY_VAULT_NAME
-    targets:
-      - select:
-          kind: SecretProviderClass
-          group: secrets-store.csi.x-k8s.io
-          version: v1
-          name: azure-kv-sf
-        fieldPaths:
-          - spec.parameters.keyvaultName
   # Replace the ConfigMap value 
-  - source:
+replacements:
+- source:
+    fieldPath: data.NAMESPACE
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - metadata.name
+    select:
+      kind: Namespace
+      name: streamforge
+      version: v1
+- source:
+    fieldPath: data.CLIENT_ID
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+    select:
+      kind: ServiceAccount
+      name: sf-workload-sa
+      version: v1
+- source:
+    fieldPath: data.CLIENT_ID
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - spec.parameters.clientID
+    select:
+      group: secrets-store.csi.x-k8s.io
+      kind: SecretProviderClass
+      name: azure-kv-sf
+      version: v1
+- source:
+    fieldPath: data.TEANNT_ID
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - spec.parameters.tenantID
+    select:
+      group: secrets-store.csi.x-k8s.io
+      kind: SecretProviderClass
+      name: azure-kv-sf
+      version: v1
+- source:
+    fieldPath: data.KEY_VAULT_NAME
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - spec.parameters.keyvaultName
+    select:
+      group: secrets-store.csi.x-k8s.io
+      kind: SecretProviderClass
+      name: azure-kv-sf
+      version: v1
+- source:
+    fieldPath: data.RABBITMQ_DEFAULT_USER
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.RABBITMQ_DEFAULT_USER
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.RABBITMQ_DEFAULT_USER
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.RABBITMQ_DEFAULT_USER
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.POSTGRES_HOST
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.POSTGRES_HOST
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.POSTGRES_HOST
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.POSTGRES_HOST
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.POSTGRES_USER
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.POSTGRES_USER
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.POSTGRES_USER
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.POSTGRES_USER
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.POSTGRES_DB
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.POSTGRES_DB
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.POSTGRES_DB
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.POSTGRES_DB
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.REDIS_HOST
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.REDIS_HOST
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.REDIS_HOST
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.REDIS_HOST
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.REDIS_PORT
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.REDIS_PORT
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.REDIS_PORT
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.REDIS_PORT
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.REDIS_URL
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.REDIS_URL
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.REDIS_URL
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.REDIS_URL
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.AZURE_STORAGE_ACCOUNT_NAME
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.AZURE_STORAGE_ACCOUNT_NAME
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.AZURE_STORAGE_ACCOUNT_NAME
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.AZURE_STORAGE_ACCOUNT_NAME
-  - source:
+      name: sf-configmaps
+      version: v1
+- source:
+    fieldPath: data.AZURE_STORAGE_ENDPOINT
+    kind: ConfigMap
+    name: infra-config
+  targets:
+  - fieldPaths:
+    - data.AZURE_STORAGE_ENDPOINT
+    select:
       kind: ConfigMap
-      name: infra-config
-      fieldPath: data.AZURE_STORAGE_ENDPOINT
-    targets:
-      - select:
-          kind: ConfigMap
-          version: v1
-          name: sf-configmaps
-        fieldPaths:
-          - data.AZURE_STORAGE_ENDPOINT
+      name: sf-configmaps
+      version: v1
