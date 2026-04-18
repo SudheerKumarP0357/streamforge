@@ -18,13 +18,13 @@ replicas:
 images:
 - name: ghcr.io/sudheerkumarp0357/streamforge/api
   newName: ghcr.io/sudheerkumarp0357/streamforge/api
-  newTag: latest
+  newTag: sha-f98e7383c9fc89c2d59aac96603cb8ccf6c5c501
 - name: ghcr.io/sudheerkumarp0357/streamforge/frontend
   newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
-  newTag: sha-f98e7383c9fc89c2d59aac96603cb8ccf6c5c501
+  newTag: latest
 - name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
   newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
-  newTag: latest
+  newTag: sha-f98e7383c9fc89c2d59aac96603cb8ccf6c5c501
 
   # Replace namespace
 
