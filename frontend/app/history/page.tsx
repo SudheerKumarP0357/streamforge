@@ -2,36 +2,56 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { WatchHistory } from '../../lib/types';
 import { serverApiUrl } from '../../lib/config';
+import { getUserIdFromToken } from '../../lib/token';
 import { logger } from '../../lib/logger';
 
 const BASE_URL = serverApiUrl
 
 export default async function HistoryPage() {
+  const renderStart = Date.now();
   const cookieStore = await cookies();
   const token = cookieStore.get('sf_access_token')?.value;
+  const userId = token ? getUserIdFromToken(token) : null;
+
+  logger.info('history render start', { page: 'history', user_id: userId });
 
   let history: WatchHistory[] = [];
 
   if (token) {
-    const fetchUrl = `${BASE_URL}/api/v1/watch/history`;
-    logger.serverFetch('GET', fetchUrl, { backend: BASE_URL });
+    const fetchPath = '/api/v1/watch/history';
+    const fetchUrl = `${BASE_URL}${fetchPath}`;
+
+    logger.info('fetch start', { page: 'history', action: 'GET', endpoint: fetchPath, user_id: userId });
+    const fetchStart = Date.now();
+
     try {
       const res = await fetch(fetchUrl, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       });
-      logger.info('[HistoryPage]', 'History fetch response', { status: res.status });
+      const duration_ms = Date.now() - fetchStart;
+
+      logger.info('fetch result', {
+        page: 'history', action: 'GET', endpoint: fetchPath,
+        status: res.status, success: res.ok, duration_ms, user_id: userId,
+      });
+
       if (res.ok) {
         const data = await res.json();
         history = data.history || [];
-        logger.info('[HistoryPage]', `Loaded ${history.length} history items`);
       }
     } catch (e) {
-      logger.error('[HistoryPage]', 'Failed to fetch history', e);
+      const duration_ms = Date.now() - fetchStart;
+      logger.error('fetch failed', e instanceof Error ? e : undefined, {
+        page: 'history', action: 'GET', endpoint: fetchPath,
+        duration_ms, user_id: userId,
+      });
     }
   } else {
-    logger.warn('[HistoryPage]', 'No access token found in cookies');
+    logger.warn('No access token found in cookies', { page: 'history' });
   }
+
+  logger.info('history render complete', { page: 'history', user_id: userId, duration_ms: Date.now() - renderStart });
 
   return (
     <div style={{ paddingTop: 'var(--nav-h)' }}>

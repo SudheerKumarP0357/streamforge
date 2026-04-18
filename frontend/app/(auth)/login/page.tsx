@@ -23,14 +23,14 @@ export default function LoginPage() {
     if (!password) { setError('Please enter your password.'); return; }
 
     setLoading(true);
-    logger.info('[LoginPage]', 'Submitting login form', { email });
+    logger.info('Submitting login form', { component: 'LoginPage', page: '/login', email });
     try {
       await auth.login(email, password);
-      logger.info('[LoginPage]', 'Login successful, redirecting to dashboard');
+      logger.info('Login successful, redirecting to dashboard', { component: 'LoginPage', page: '/login' });
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
-      logger.error('[LoginPage]', 'Login failed', { email, error: err?.error });
+      logger.error('Login failed', { component: 'LoginPage', page: '/login', email, error: err?.error });
       setError(err?.error || 'Invalid email or password.');
     } finally {
       setLoading(false);

@@ -84,12 +84,12 @@ export function clearAuthCookies(): void {
 async function attemptRefresh(): Promise<void> {
   const refreshToken = getTokenCookie(REFRESH_TOKEN_NAME);
   if (!refreshToken) {
-    logger.warn('[attemptRefresh]', 'No refresh token available in cookies');
+    logger.warn('No refresh token available in cookies', { component: 'attemptRefresh' });
     throw new Error('No refresh token available');
   }
 
   const refreshUrl = `${BASE_URL}/auth/refresh`;
-  logger.api('POST', refreshUrl, { action: 'token-refresh' });
+  logger.debug(`POST ${refreshUrl}`, { component: 'attemptRefresh', action: 'token-refresh' });
 
   const res = await fetch(refreshUrl, {
     method: 'POST',
@@ -98,12 +98,12 @@ async function attemptRefresh(): Promise<void> {
   });
 
   if (!res.ok) {
-    logger.error('[attemptRefresh]', 'Refresh failed', { status: res.status, statusText: res.statusText });
+    logger.error('Refresh failed', { component: 'attemptRefresh', status: res.status, statusText: res.statusText });
     throw new Error('Refresh failed');
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  logger.info('[attemptRefresh]', 'Token refreshed successfully', { expiresIn: data.expires_in });
+  logger.info('Token refreshed successfully', { component: 'attemptRefresh', expiresIn: data.expires_in });
   setTokenCookie(ACCESS_TOKEN_NAME, data.access_token, data.expires_in);
 }
 
@@ -136,8 +136,10 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
   const fullUrl = `${BASE_URL}${path}`;
   const startTime = Date.now();
 
-  logger.api(method, fullUrl, {
-    requestId,
+  logger.debug(`${method} ${fullUrl}`, {
+    component: 'fetchWithAuth',
+    action: 'api-request',
+    request_id: requestId,
     hasToken: !!token,
     hasBody: !!body,
     bodyType: body instanceof FormData ? 'FormData' : typeof body,
@@ -164,10 +166,10 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
   } catch (err: any) {
     const elapsed = Date.now() - startTime;
     if (err.name === 'AbortError') {
-      logger.error('[fetchWithAuth]', `Timeout after 30s: ${method} ${path}`, { requestId, elapsed });
+      logger.error(`Timeout after 30s: ${method} ${path}`, { component: 'fetchWithAuth', request_id: requestId, elapsed });
       throw { error: 'Request timed out after 30 seconds' };
     }
-    logger.error('[fetchWithAuth]', `Network error: ${method} ${path}`, { requestId, elapsed, message: err.message });
+    logger.error(`Network error: ${method} ${path}`, { component: 'fetchWithAuth', request_id: requestId, elapsed, message: err.message });
     throw { error: err.message || 'Network error' };
   } finally {
     clearTimeout(timeoutId);
@@ -180,16 +182,16 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
   const backendInfo = backendUrl ? { backendUrl } : {};
 
   if (!res.ok) {
-    logger.warn('[fetchWithAuth]', `${method} ${path} → ${res.status}`, { requestId, elapsed, ...backendInfo });
+    logger.warn(`${method} ${path} → ${res.status}`, { component: 'fetchWithAuth', request_id: requestId, elapsed, ...backendInfo });
 
     if (res.status === 401) {
       if (!retried) {
-        logger.info('[fetchWithAuth]', 'Got 401, attempting token refresh...', { requestId });
+        logger.info('Got 401, attempting token refresh...', { component: 'fetchWithAuth', request_id: requestId });
         try {
           await attemptRefresh();
           return fetchWithAuth<T>(path, method, body, true); // retry once
         } catch (refreshErr) {
-          logger.error('[fetchWithAuth]', 'Refresh failed, redirecting to login', { requestId });
+          logger.error('Refresh failed, redirecting to login', { component: 'fetchWithAuth', request_id: requestId });
           clearAuthCookies();
           if (typeof window !== 'undefined') {
             window.location.href = '/login';
@@ -197,7 +199,7 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
           throw refreshErr;
         }
       } else {
-        logger.error('[fetchWithAuth]', '401 after retry, clearing session', { requestId });
+        logger.error('401 after retry, clearing session', { component: 'fetchWithAuth', request_id: requestId });
         clearAuthCookies();
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
@@ -212,11 +214,11 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
     } catch {
       errorData = { error: await res.text() || res.statusText };
     }
-    logger.error('[fetchWithAuth]', `Error ${res.status} on ${method} ${path}`, { requestId, elapsed, ...backendInfo, errorData });
+    logger.error(`Error ${res.status} on ${method} ${path}`, { component: 'fetchWithAuth', request_id: requestId, elapsed, ...backendInfo, errorData });
     throw errorData;
   }
 
-  logger.info('[fetchWithAuth]', `${method} ${path} → ${res.status} (${elapsed}ms)`, { requestId, ...backendInfo });
+  logger.info(`${method} ${path} → ${res.status} (${elapsed}ms)`, { component: 'fetchWithAuth', request_id: requestId, ...backendInfo });
 
   if (res.status === 204) {
     return undefined as unknown as T;
@@ -230,25 +232,25 @@ async function fetchWithAuth<T>(path: string, method: string = 'GET', body?: unk
  */
 export const auth = {
   register: (email: string, password: string): Promise<{ user_id: string; email: string }> => {
-    logger.info('[auth.register]', 'Registering new user', { email });
+    logger.info('Registering new user', { component: 'auth.register', email });
     return fetchWithAuth('/auth/register', 'POST', { email, password });
   },
 
   login: async (email: string, password: string): Promise<{ access_token: string; refresh_token: string; expires_in: number }> => {
-    logger.info('[auth.login]', 'Logging in user', { email });
+    logger.info('Logging in user', { component: 'auth.login', email });
     const data = await fetchWithAuth<{ access_token: string; refresh_token: string; expires_in: number }>('/auth/login', 'POST', { email, password });
-    logger.info('[auth.login]', 'Login successful, setting cookies', { expiresIn: data.expires_in });
+    logger.info('Login successful, setting cookies', { component: 'auth.login', expiresIn: data.expires_in });
     setTokenCookie(ACCESS_TOKEN_NAME, data.access_token, data.expires_in);
     setTokenCookie(REFRESH_TOKEN_NAME, data.refresh_token, 60 * 60 * 24 * 7); // 7 days expiry
     return data;
   },
 
   logout: async (): Promise<void> => {
-    logger.info('[auth.logout]', 'Logging out user');
+    logger.info('Logging out user', { component: 'auth.logout' });
     try {
       await fetchWithAuth('/auth/logout', 'POST');
     } finally {
-      logger.info('[auth.logout]', 'Clearing auth cookies and redirecting to login');
+      logger.info('Clearing auth cookies and redirecting to login', { component: 'auth.logout' });
       clearAuthCookies();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
@@ -264,7 +266,7 @@ export const videos = {
     if (status) params.append('status', status);
 
     const qs = params.toString() ? `?${params.toString()}` : '';
-    logger.info('[videos.list]', 'Fetching video list', { page, status, path: `/videos${qs}` });
+    logger.info('Fetching video list', { component: 'videos.list', page: page?.toString(), status, path: `/videos${qs}` });
     return fetchWithAuth(`/videos${qs}`);
   },
 
@@ -275,34 +277,34 @@ export const videos = {
     if (limit !== undefined) params.append('limit', limit.toString());
 
     const qs = params.toString() ? `?${params.toString()}` : '';
-    logger.info('[videos.search]', 'Searching videos', { query, page, limit, path: `/videos/search${qs}` });
+    logger.info('Searching videos', { component: 'videos.search', query, page: page?.toString(), limit, path: `/videos/search${qs}` });
     return fetchWithAuth(`/videos/search${qs}`);
   },
 
   getById: (id: string): Promise<Video> => {
-    logger.info('[videos.getById]', 'Fetching video by ID', { videoId: id });
+    logger.info('Fetching video by ID', { component: 'videos.getById', video_id: id });
     return fetchWithAuth(`/videos/${id}`);
   },
 
   getStreamUrl: (id: string): Promise<{ master_playlist_url: string }> => {
-    logger.info('[videos.getStreamUrl]', 'Fetching stream URL', { videoId: id });
+    logger.info('Fetching stream URL', { component: 'videos.getStreamUrl', video_id: id });
     return fetchWithAuth(`/videos/${id}/stream`);
   },
 
   delete: (id: string): Promise<void> => {
-    logger.info('[videos.delete]', 'Deleting video', { videoId: id });
+    logger.info('Deleting video', { component: 'videos.delete', video_id: id });
     return fetchWithAuth(`/videos/${id}`, 'DELETE');
   },
 };
 
 export const watch = {
   saveEvent: (videoId: string, eventType: 'play' | 'pause' | 'seek' | 'end', positionSeconds: number): Promise<void> => {
-    logger.info('[watch.saveEvent]', 'Saving watch event', { videoId, eventType, positionSeconds });
+    logger.info('Saving watch event', { component: 'watch.saveEvent', video_id: videoId, eventType, positionSeconds });
     return fetchWithAuth(`/watch/${videoId}/event`, 'POST', { event_type: eventType, position_seconds: positionSeconds });
   },
 
   getHistory: (): Promise<WatchHistory[]> => {
-    logger.info('[watch.getHistory]', 'Fetching watch history');
+    logger.info('Fetching watch history', { component: 'watch.getHistory' });
     return fetchWithAuth<{ history: WatchHistory[] }>('/watch/history').then(res => res.history);
   },
 };
@@ -314,12 +316,12 @@ export const admin = {
     if (limit !== undefined) params.append('limit', limit.toString());
 
     const qs = params.toString() ? `?${params.toString()}` : '';
-    logger.info('[admin.getVideos]', 'Fetching admin video list', { page, limit });
+    logger.info('Fetching admin video list', { component: 'admin.getVideos', page: page?.toString(), limit });
     return fetchWithAuth(`/admin/videos${qs}`);
   },
 
   getStats: (): Promise<AdminStats> => {
-    logger.info('[admin.getStats]', 'Fetching admin stats');
+    logger.info('Fetching admin stats', { component: 'admin.getStats' });
     return fetchWithAuth('/admin/stats');
   },
 };

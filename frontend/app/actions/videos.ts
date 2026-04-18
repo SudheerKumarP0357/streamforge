@@ -9,14 +9,14 @@ import { logger } from '../../lib/logger'
 export async function deleteVideoAction(videoId: string): Promise<{ success: boolean; error?: string }> {
   const token = (await cookies()).get('sf_access_token')?.value
   if (!token) {
-    logger.warn('[deleteVideoAction]', 'Not authenticated — no access token')
+    logger.warn('Not authenticated — no access token', { component: 'deleteVideoAction' })
     return { success: false, error: 'Not authenticated' }
   }
 
   const userId = getUserIdFromToken(token)
 
   const deleteUrl = `${serverApiUrl}/api/v1/videos/${videoId}`
-  logger.serverFetch('DELETE', deleteUrl, { videoId, userId, backend: serverApiUrl })
+  logger.debug(`DELETE ${deleteUrl}`, { component: 'deleteVideoAction', action: 'server-fetch', video_id: videoId, user_id: userId, backend: serverApiUrl })
 
   try {
     const res = await fetch(
@@ -28,26 +28,26 @@ export async function deleteVideoAction(videoId: string): Promise<{ success: boo
       }
     )
 
-    logger.info('[deleteVideoAction]', 'Delete response', { status: res.status, videoId })
+    logger.info('Delete response', { component: 'deleteVideoAction', status: res.status, video_id: videoId })
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      logger.error('[deleteVideoAction]', 'Delete failed', { status: res.status, videoId, body })
+      logger.error('Delete failed', { component: 'deleteVideoAction', status: res.status, video_id: videoId, body })
       return { success: false, error: body.error ?? `Delete failed: ${res.status}` }
     }
 
     // Surgically invalidate ONLY this user's video list cache
     if (userId) {
-      logger.info('[deleteVideoAction]', 'Revalidating cache', { tags: [`user-videos-${userId}`, `video-${videoId}`] })
+      logger.info('Revalidating cache', { component: 'deleteVideoAction', tags: [`user-videos-${userId}`, `video-${videoId}`] })
       revalidateTag(`user-videos-${userId}`, 'max')     // ← busts the dashboard fetch
     }
     revalidateTag(`video-${videoId}`, 'max')            // ← busts the single video fetch
 
-    logger.info('[deleteVideoAction]', 'Video deleted successfully', { videoId })
+    logger.info('Video deleted successfully', { component: 'deleteVideoAction', video_id: videoId })
     return { success: true }
 
   } catch (err) {
-    logger.error('[deleteVideoAction]', 'Network error during delete', { videoId, err })
+    logger.error('Network error during delete', { component: 'deleteVideoAction', video_id: videoId, err })
     return { success: false, error: 'Network error. Please try again.' }
   }
 }

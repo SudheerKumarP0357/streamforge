@@ -110,7 +110,7 @@ jobs:
         run: kubectl get applicationloadbalancer alb-infra -n ${{
           github.event.inputs.alb_controller_namespace }} -o yaml
 
-  cert-manager:
+  setup-cert-manager:
     name: Setup Cert Manager
     runs-on: ubuntu-latest
     steps:

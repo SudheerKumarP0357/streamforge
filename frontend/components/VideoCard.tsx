@@ -65,7 +65,7 @@ export default function VideoCard({ video: initialVideo, onDelete, onRestore, on
 
   useEffect(() => {
     if (video.status !== 'processing' && video.status !== 'pending') return;
-    logger.info('[VideoCard]', 'Starting status polling', { videoId: video.id, currentStatus: video.status });
+    logger.info('Starting status polling', { component: 'VideoCard', video_id: video.id, currentStatus: video.status });
     const iv = setInterval(async () => {
       try {
         const updated = await apiVideos.getById(video.id);
@@ -73,16 +73,16 @@ export default function VideoCard({ video: initialVideo, onDelete, onRestore, on
         
         // Let parent know status changed so stats strip updates
         if (updated.status !== video.status) {
-          logger.info('[VideoCard]', 'Video status changed', { videoId: video.id, from: video.status, to: updated.status });
+          logger.info('Video status changed', { component: 'VideoCard', video_id: video.id, from: video.status, to: updated.status });
           onUpdate?.(updated);
         }
 
         if (updated.status === 'ready' || updated.status === 'failed') {
-          logger.info('[VideoCard]', 'Polling complete — terminal status', { videoId: video.id, status: updated.status });
+          logger.info('Polling complete — terminal status', { component: 'VideoCard', video_id: video.id, status: updated.status });
           clearInterval(iv);
         }
       } catch (e) {
-        logger.error('[VideoCard]', 'Failed to poll video status', { videoId: video.id, error: e });
+        logger.error('Failed to poll video status', { component: 'VideoCard', video_id: video.id });
       }
     }, 5000);
     return () => clearInterval(iv);
@@ -99,7 +99,7 @@ export default function VideoCard({ video: initialVideo, onDelete, onRestore, on
     
     setIsDeleting(true);
     setDeleteError(null);
-    logger.info('[VideoCard]', 'Deleting video (optimistic)', { videoId: video.id, title: video.title });
+    logger.info('Deleting video (optimistic)', { component: 'VideoCard', video_id: video.id, title: video.title });
     
     // Optimistic removal - hide the card immediately
     onDelete(video.id);
@@ -108,13 +108,13 @@ export default function VideoCard({ video: initialVideo, onDelete, onRestore, on
     const result = await deleteVideoAction(video.id);
     
     if (!result.success) {
-      logger.error('[VideoCard]', 'Delete failed, rolling back', { videoId: video.id, error: result.error });
+      logger.error('Delete failed, rolling back', { component: 'VideoCard', video_id: video.id, error: result.error });
       // Rollback: restore the card if deletion failed
       onRestore(video);
       setDeleteError(result.error ?? 'Delete failed. Please try again.');
       setIsDeleting(false);
     } else {
-      logger.info('[VideoCard]', 'Delete confirmed by server', { videoId: video.id });
+      logger.info('Delete confirmed by server', { component: 'VideoCard', video_id: video.id });
     }
   };
 

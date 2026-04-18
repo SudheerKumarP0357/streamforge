@@ -3,12 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"streamforge/api/internal/cache"
 	"streamforge/api/internal/db"
+	"streamforge/api/internal/middleware"
 	"streamforge/api/internal/queue"
 )
 
@@ -38,6 +40,10 @@ type HealthResponse struct {
 }
 
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	logger := slog.With("request_id", middleware.GetRequestID(r), "handler", "HealthHandler.Health")
+	logger.Info("starting")
+
 	ctx := r.Context()
 	deps := make(map[string]string)
 	status := "ok"
@@ -96,4 +102,10 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
 	json.NewEncoder(w).Encode(resp)
+
+	if status == "degraded" {
+		logger.Warn("completed", "outcome", "degraded", "dependencies", deps, "duration_ms", time.Since(start).Milliseconds())
+	} else {
+		logger.Info("completed", "outcome", "success", "duration_ms", time.Since(start).Milliseconds())
+	}
 }

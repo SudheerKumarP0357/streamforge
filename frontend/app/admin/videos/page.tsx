@@ -29,22 +29,22 @@ export default async function AdminVideosPage({ searchParams }: { searchParams: 
   let total = 0;
 
   const fetchUrl = `${serverApiUrl}/api/v1/admin/videos?page=${page}&limit=50`;
-  logger.serverFetch('GET', fetchUrl, { page, backend: serverApiUrl });
+  logger.debug(`GET ${fetchUrl}`, { component: 'AdminVideosPage', action: 'server-fetch', page: String(page), backend: serverApiUrl });
 
   try {
     const res = await fetch(fetchUrl, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store'
     });
-    logger.info('[AdminVideosPage]', 'Admin videos fetch response', { status: res.status, page });
+    logger.info('Admin videos fetch response', { component: 'AdminVideosPage', status: res.status, page: String(page) });
     if (res.ok) {
       const data = await res.json();
       videos = data.videos || [];
       total = data.total || 0;
-      logger.info('[AdminVideosPage]', `Loaded ${videos.length} videos (total: ${total})`);
+      logger.info(`Loaded ${videos.length} videos (total: ${total})`, { component: 'AdminVideosPage' });
     }
   } catch (e) {
-    logger.error('[AdminVideosPage]', 'Failed to fetch admin videos', e);
+    logger.error('Failed to fetch admin videos', e instanceof Error ? e : undefined, { component: 'AdminVideosPage' });
   }
 
   return (

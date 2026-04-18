@@ -26,9 +26,9 @@ export default function RegisterPage() {
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
-    logger.info('[RegisterPage]', 'Submitting registration form', { email });
+    logger.info('Submitting registration form', { component: 'RegisterPage', page: '/register', email });
     try {
-      logger.info('[RegisterPage]', 'Calling auth.register', { email });
+      logger.info('Calling auth.register', { component: 'RegisterPage', email });
       console.log('DEBUG', {
         baseUrl: '/api/proxy',
         windowExists: typeof window !== 'undefined',
@@ -39,16 +39,16 @@ export default function RegisterPage() {
         await auth.register(email, password);
         console.log('DEBUG', 'Registration successful');
       } catch (err: any) {
-        logger.error('[RegisterPage]', 'Registration failed', { email, error: err?.error });
+        logger.error('Registration failed', { component: 'RegisterPage', email, error: err?.error });
         throw err;
       }
-      logger.info('[RegisterPage]', 'Registration successful, auto-logging in');
+      logger.info('Registration successful, auto-logging in', { component: 'RegisterPage' });
       await auth.login(email, password);
-      logger.info('[RegisterPage]', 'Auto-login successful, redirecting to dashboard');
+      logger.info('Auto-login successful, redirecting to dashboard', { component: 'RegisterPage' });
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
-      logger.error('[RegisterPage]', 'Registration failed', { email, error: err?.error });
+      logger.error('Registration failed', { component: 'RegisterPage', email, error: err?.error });
       const msg = err?.error?.toLowerCase() || '';
       if (msg.includes('duplicate') || msg.includes('exists') || msg.includes('taken') || msg.includes('already')) {
         setError('Email address is already in use.');

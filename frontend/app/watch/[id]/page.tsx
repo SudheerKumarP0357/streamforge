@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { Video } from "../../../lib/types";
 import { serverApiUrl } from "../../../lib/config";
+import { getUserIdFromToken } from "../../../lib/token";
 import VideoPlayerWrapper from "../../../components/VideoPlayerWrapper";
 import { logger } from "../../../lib/logger";
 
@@ -12,12 +13,18 @@ export default async function WatchPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const renderStart = Date.now();
   const { id } = await params;
   const cookieStore = await cookies();
   const token = cookieStore.get("sf_access_token")?.value;
+  const userId = token ? getUserIdFromToken(token) : null;
+
+  logger.info('watch render start', { page: 'watch', video_id: id, user_id: userId });
 
   /* ── Auth guard ── */
   if (!token) {
+    logger.warn('No access token, redirecting to login', { page: 'watch', video_id: id });
+    logger.info('watch render complete', { page: 'watch', video_id: id, user_id: null, duration_ms: Date.now() - renderStart });
     return (
       <div style={{ paddingTop: "var(--nav-h)" }}>
         <div
@@ -42,28 +49,42 @@ export default async function WatchPage({
 
   try {
     /* 1 — metadata */
-    const metaUrl = `${BASE_URL}/api/v1/videos/${id}`;
-    logger.serverFetch('GET', metaUrl, { videoId: id });
+    const metaPath = `/api/v1/videos/${id}`;
+    const metaUrl = `${BASE_URL}${metaPath}`;
+
+    logger.info('fetch start', { page: 'watch', action: 'GET', endpoint: metaPath, user_id: userId, video_id: id });
+    const metaFetchStart = Date.now();
+
     const metaRes = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${token}` },
       next: { tags: [`video-${id}`], revalidate: 300 },
     });
-    logger.info('[WatchPage]', 'Video metadata response', { status: metaRes.status, videoId: id });
+    const metaDuration = Date.now() - metaFetchStart;
+
+    logger.info('fetch result', {
+      page: 'watch', action: 'GET', endpoint: metaPath,
+      status: metaRes.status, success: metaRes.ok, duration_ms: metaDuration,
+      user_id: userId, video_id: id,
+    });
+
     if (!metaRes.ok) {
       error =
         metaRes.status === 404
           ? "Video not found."
           : "Failed to load video information.";
-      logger.error('[WatchPage]', error, { status: metaRes.status, videoId: id });
+      logger.error(error, { page: 'watch', endpoint: metaPath, status: metaRes.status, video_id: id, user_id: userId });
       throw new Error(error);
     }
     video = await metaRes.json();
-    logger.info('[WatchPage]', 'Video metadata loaded', { videoId: id, status: video?.status, title: video?.title });
 
     /* 2 — stream URL */
     if (video?.status === "ready") {
-      const streamEndpoint = `${BASE_URL}/api/v1/videos/${id}/stream`;
-      logger.serverFetch('GET', streamEndpoint, { videoId: id });
+      const streamPath = `/api/v1/videos/${id}/stream`;
+      const streamEndpoint = `${BASE_URL}${streamPath}`;
+
+      logger.info('fetch start', { page: 'watch', action: 'GET', endpoint: streamPath, user_id: userId, video_id: id });
+      const streamFetchStart = Date.now();
+
       const streamRes = await fetch(
         streamEndpoint,
         {
@@ -71,22 +92,29 @@ export default async function WatchPage({
           cache: 'no-store',   // ← SAS URLs expire — never cache this
         },
       );
-      logger.info('[WatchPage]', 'Stream URL response', { status: streamRes.status, videoId: id });
+      const streamDuration = Date.now() - streamFetchStart;
+
+      logger.info('fetch result', {
+        page: 'watch', action: 'GET', endpoint: streamPath,
+        status: streamRes.status, success: streamRes.ok, duration_ms: streamDuration,
+        user_id: userId, video_id: id,
+      });
+
       if (streamRes.ok) {
         const streamData = await streamRes.json();
         streamUrl = streamData.master_playlist_url;
-        sasToken = streamData.sas_token;             // ← add this
-        logger.info('[WatchPage]', 'Stream URL obtained', { videoId: id, hasStreamUrl: !!streamUrl, hasSasToken: !!sasToken });
+        sasToken = streamData.sas_token;
       } else {
         error = "Failed to retrieve stream URL.";
-        logger.error('[WatchPage]', error, { status: streamRes.status, videoId: id });
+        logger.error(error, { page: 'watch', endpoint: streamPath, status: streamRes.status, video_id: id, user_id: userId });
       }
     } else {
-      logger.info('[WatchPage]', 'Video not ready for streaming', { videoId: id, status: video?.status });
+      logger.info('Video not ready for streaming', { page: 'watch', video_id: id, status: video?.status, user_id: userId });
     }
 
     /* ── Error state ── */
     if (error || !video) {
+      logger.info('watch render complete', { page: 'watch', video_id: id, user_id: userId, duration_ms: Date.now() - renderStart, outcome: 'error' });
       return (
         <div style={{ paddingTop: "var(--nav-h)" }}>
           <div
@@ -160,6 +188,7 @@ export default async function WatchPage({
 
     /* ── Not ready state ── */
     if (video.status !== "ready") {
+      logger.info('watch render complete', { page: 'watch', video_id: id, user_id: userId, duration_ms: Date.now() - renderStart, outcome: video.status });
       const isProcessing = video.status === "processing";
       const isFailed = video.status === "failed";
 
@@ -291,7 +320,7 @@ export default async function WatchPage({
     }
 
     /* ── Ready state ── */
-    logger.info('[WatchPage]', 'Rendering video player', { videoId: id, hasStreamUrl: !!streamUrl, hasSasToken: !!sasToken });
+    logger.info('watch render complete', { page: 'watch', video_id: id, user_id: userId, duration_ms: Date.now() - renderStart, outcome: 'ready' });
 
     return (
       <div style={{ paddingTop: "var(--nav-h)" }}>
@@ -508,7 +537,8 @@ export default async function WatchPage({
         </div>
       </div>
     );
-  } catch {
+  } catch (caughtErr) {
+    logger.error('watch render failed', caughtErr instanceof Error ? caughtErr : undefined, { page: 'watch', video_id: id, user_id: userId, duration_ms: Date.now() - renderStart });
     return (
       <div style={{ paddingTop: "var(--nav-h)" }}>
         <div

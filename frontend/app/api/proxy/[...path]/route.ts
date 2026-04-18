@@ -28,12 +28,22 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const path = pathSegments.join('/')
   const search = req.nextUrl.search
   const url = `${BACKEND}/api/v1/${path}${search}`
+  const targetUrlBase = url.split('?')[0] // Scrub SAS tokens
 
   const token = (await cookies()).get('sf_access_token')?.value
+  const requestId = crypto.randomUUID()
 
-  logger.serverFetch(method, url, { hasToken: !!token, backend: BACKEND })
+  logger.info('proxy request start', {
+    component: 'proxy',
+    method,
+    path: `/${path}`,
+    target_url: targetUrlBase,
+    request_id: requestId
+  })
 
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = {
+    'X-Request-ID': requestId
+  }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   const startTime = Date.now()
@@ -41,32 +51,20 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   // In dev mode, expose the resolved backend URL to the client via a response header
   const devHeaders: Record<string, string> = {}
   if (logger.isEnabled) {
-    devHeaders['X-SF-Backend-URL'] = url
+    devHeaders['X-SF-Backend-URL'] = targetUrlBase
   }
 
   // For multipart uploads: forward the body and content-type as-is
-  // Do NOT set Content-Type manually — let the browser set it with the boundary
   const contentType = req.headers.get('content-type') || ''
+  let body: BodyInit | undefined = undefined;
+
   if (contentType.includes('multipart/form-data')) {
-    logger.info('[proxy]', 'Multipart upload detected', { path, contentType: contentType.substring(0, 60) })
-    const body = await req.arrayBuffer()
+    body = await req.arrayBuffer()
     headers['Content-Type'] = contentType   // preserve boundary parameter
-    const res = await fetch(url, { method, headers, body, cache: 'no-store' })
-    const elapsed = Date.now() - startTime
-    const data = await res.text()
-    logger.serverFetch(method, url, { status: res.status, elapsed, multipart: true })
-    return new NextResponse(data, {
-      status: res.status,
-      headers: { ...devHeaders },
-    })
+  } else {
+    headers['Content-Type'] = 'application/json'
+    body = method !== 'GET' && method !== 'DELETE' ? await req.text() : undefined
   }
-
-  // Not multipart
-  headers['Content-Type'] = 'application/json'
-
-  const body = method !== 'GET' && method !== 'DELETE'
-    ? await req.text()
-    : undefined
 
   try {
     const res = await fetch(url, {
@@ -76,25 +74,49 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
       cache: 'no-store',
     })
 
-    const elapsed = Date.now() - startTime
+    const duration_ms = Date.now() - startTime
     const data = await res.text()
+    const resContentType = res.headers.get('Content-Type') || 'application/json'
 
-    logger.serverFetch(method, url, { status: res.status, elapsed, responseLength: data.length })
+    const logCtx = {
+      component: 'proxy',
+      request_id: requestId,
+      status_code: res.status,
+      duration_ms,
+      content_type: resContentType
+    }
+
+    if (res.status >= 500) {
+      logger.error('proxy response error', undefined, logCtx)
+    } else if (res.status >= 400) {
+      logger.warn('proxy response warning', logCtx)
+    } else {
+      logger.info('proxy response success', logCtx)
+    }
 
     return new NextResponse(data, {
       status: res.status,
       headers: {
-        'Content-Type': res.headers.get('Content-Type') || 'application/json',
+        'Content-Type': resContentType,
         ...devHeaders,
       },
     })
   } catch (err) {
-    const elapsed = Date.now() - startTime
-    logger.error('[proxy]', `${method} ${url} failed after ${elapsed}ms`, err)
+    const duration_ms = Date.now() - startTime
+    const error_message = err instanceof Error ? err.message : String(err)
+    
+    logger.error('proxy request failed', err instanceof Error ? err : undefined, { 
+      component: 'proxy',
+      request_id: requestId,
+      target_url: targetUrlBase,
+      duration_ms,
+      error_message
+    })
+
     return NextResponse.json(
       {
         error: 'Failed to reach backend service',
-        ...(logger.isEnabled ? { backend_url: url, backend: BACKEND } : {}),
+        ...(logger.isEnabled ? { backend_url: targetUrlBase, backend: BACKEND } : {}),
       },
       {
         status: 503,

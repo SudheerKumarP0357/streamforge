@@ -34,7 +34,7 @@ export default function UploadForm() {
     if (!f.type.startsWith('video/')) { setError('Please select a valid video file.'); return; }
     if (f.size > MAX_FILE_SIZE) { setError('File size exceeds the 2 GB limit.'); return; }
     if (f.size > 500 * 1024 * 1024) { setWarning('Large file (>500MB) selected. Upload may take a while.'); }
-    logger.info('[UploadForm]', 'File selected', { name: f.name, size: fmtBytes(f.size), type: f.type });
+    logger.info('File selected', { component: 'UploadForm', name: f.name, size: fmtBytes(f.size), type: f.type });
     setFile(f);
     if (!title) setTitle(f.name.split('.').slice(0, -1).join('.').substring(0, 100));
   };
@@ -59,7 +59,7 @@ export default function UploadForm() {
     const token = getTokenCookie('sf_access_token');
 
     const uploadUrl = `/api/proxy/videos`;
-    logger.info('[UploadForm]', 'Starting upload', { title, fileName: file.name, fileSize: fmtBytes(file.size), url: uploadUrl, hasToken: !!token });
+    logger.info('Starting upload', { component: 'UploadForm', action: 'upload', title, fileName: file.name, fileSize: fmtBytes(file.size), url: uploadUrl, hasToken: !!token });
 
     xhr.open('POST', uploadUrl, true);
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -76,32 +76,32 @@ export default function UploadForm() {
       }
       // Log at 25% milestones
       if (Math.floor(pct) % 25 === 0 && Math.floor(pct) > 0) {
-        logger.debug('[UploadForm]', `Upload progress: ${Math.round(pct)}%`, { loaded: ev.loaded, total: ev.total });
+        logger.debug(`Upload progress: ${Math.round(pct)}%`, { component: 'UploadForm', loaded: ev.loaded, total: ev.total });
       }
     };
     xhr.onload = () => {
       setIsUploading(false);
       if (xhr.status === 201) {
-        logger.info('[UploadForm]', 'Upload completed successfully', { status: xhr.status, title });
+        logger.info('Upload completed successfully', { component: 'UploadForm', status: xhr.status, title });
         setSuccess(true); return;
       }
       try {
         const errMsg = JSON.parse(xhr.responseText).error || 'Upload failed.';
-        logger.error('[UploadForm]', 'Upload failed', { status: xhr.status, error: errMsg });
+        logger.error('Upload failed', { component: 'UploadForm', status: xhr.status, error: errMsg });
         setError(errMsg);
       } catch {
-        logger.error('[UploadForm]', 'Upload failed with non-JSON response', { status: xhr.status });
+        logger.error('Upload failed with non-JSON response', { component: 'UploadForm', status: xhr.status });
         setError('Upload failed with status: ' + xhr.status);
       }
     };
     xhr.onerror = () => {
       setIsUploading(false);
-      logger.error('[UploadForm]', 'Network error during upload');
+      logger.error('Network error during upload', { component: 'UploadForm' });
       setError('Network error. Check your connection.');
     };
     xhr.onabort = () => {
       setIsUploading(false);
-      logger.warn('[UploadForm]', 'Upload cancelled by user');
+      logger.warn('Upload cancelled by user', { component: 'UploadForm' });
       setError('Upload was cancelled.');
     };
     xhr.send(formData);

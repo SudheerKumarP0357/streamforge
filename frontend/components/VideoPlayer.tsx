@@ -30,12 +30,12 @@ export default function VideoPlayer({ videoId, src, sasToken, title, status }: V
     if (!videoRef.current) return;
 
     if (playerRef.current) {
-      logger.info('[VideoPlayer]', 'Updating source on existing player', { videoId, src: src.substring(0, 80) });
+      logger.info('Updating source on existing player', { component: 'VideoPlayer', video_id: videoId, src: src.substring(0, 80) });
       playerRef.current.src([{ src, type: 'application/x-mpegURL' }]);
       return;
     }
 
-    logger.info('[VideoPlayer]', 'Initializing Video.js player', { videoId, src: src.substring(0, 80), hasSasToken: !!sasToken });
+    logger.info('Initializing Video.js player', { component: 'VideoPlayer', video_id: videoId, src: src.substring(0, 80), hasSasToken: !!sasToken });
 
     const videoElement = document.createElement('video-js');
     videoElement.classList.add('vjs-big-play-centered');
@@ -61,11 +61,11 @@ export default function VideoPlayer({ videoId, src, sasToken, title, status }: V
       const vhs = tech?.vhs ?? tech?.hls; // 'vhs' in recent builds, 'hls' in older
 
       if (!vhs) {
-        logger.warn('[VideoPlayer]', 'VHS tech not available — SAS injection skipped', { videoId });
+        logger.warn('VHS tech not available — SAS injection skipped', { component: 'VideoPlayer', video_id: videoId });
         return;
       }
 
-      logger.info('[VideoPlayer]', 'SAS token injection hook installed', { videoId });
+      logger.info('SAS token injection hook installed', { component: 'VideoPlayer', video_id: videoId });
 
       vhs.xhr.onRequest((options: any) => {
         const url: string = options.uri ?? '';
@@ -87,7 +87,7 @@ export default function VideoPlayer({ videoId, src, sasToken, title, status }: V
     const trackEvent = (eventType: 'play' | 'pause' | 'end') => {
       const position = Math.floor(player.currentTime() ?? 0);
       const eventUrl = `/api/proxy/watch/${videoId}/event`;
-      logger.info('[VideoPlayer]', 'Tracking watch event', { videoId, eventType, position, url: eventUrl });
+      logger.info('Tracking watch event', { component: 'VideoPlayer', video_id: videoId, action: eventType, position, url: eventUrl });
       fetch(eventUrl, {
         method: 'POST',
         headers: {
@@ -95,7 +95,7 @@ export default function VideoPlayer({ videoId, src, sasToken, title, status }: V
         },
         body: JSON.stringify({ event_type: eventType, position_seconds: position }),
       }).catch((err) => {
-        logger.error('[VideoPlayer]', 'Failed to track watch event', { videoId, eventType, error: err });
+        logger.error('Failed to track watch event', { component: 'VideoPlayer', video_id: videoId, action: eventType });
       });
     };
 

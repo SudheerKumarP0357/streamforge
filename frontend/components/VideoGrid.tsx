@@ -37,12 +37,12 @@ export default function VideoGrid({ initialVideos }: VideoGridProps) {
     setIsSearching(true);
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        logger.info('[VideoGrid]', 'Searching videos', { query: searchQuery.trim() });
+        logger.info('Searching videos', { component: 'VideoGrid', query: searchQuery.trim() });
         const response = await videosApi.search(searchQuery.trim(), 1, 50);
-        logger.info('[VideoGrid]', `Search returned ${response.videos.length} results`);
+        logger.info(`Search returned ${response.videos.length} results`, { component: 'VideoGrid' });
         setVideos(response.videos);
       } catch (error) {
-        logger.error('[VideoGrid]', 'Failed to search videos', { query: searchQuery.trim(), error });
+        logger.error('Failed to search videos', { component: 'VideoGrid', query: searchQuery.trim(), error });
       } finally {
         setIsSearching(false);
       }

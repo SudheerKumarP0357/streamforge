@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -35,14 +35,19 @@ func NewPublisher(url string) (*Publisher, error) {
 }
 
 func (p *Publisher) connect() error {
+	logger := slog.With("component", "rabbitmq", "operation", "connect")
+	logger.Info("connecting to RabbitMQ")
+
 	conn, err := amqp.Dial(p.url)
 	if err != nil {
+		logger.Error("failed to dial RabbitMQ", "error", err.Error())
 		return fmt.Errorf("dial: %w", err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		conn.Close()
+		logger.Error("failed to open channel", "error", err.Error())
 		return fmt.Errorf("channel: %w", err)
 	}
 
@@ -59,6 +64,7 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to declare exchange", "exchange", "transcoder", "error", err.Error())
 		return fmt.Errorf("exchange declare: %w", err)
 	}
 
@@ -75,6 +81,7 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to declare DLX exchange", "exchange", "transcoder.dlx", "error", err.Error())
 		return fmt.Errorf("dlx exchange declare: %w", err)
 	}
 
@@ -94,6 +101,7 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to declare main queue", "queue", "transcoder.jobs", "error", err.Error())
 		return fmt.Errorf("queue declare: %w", err)
 	}
 
@@ -108,6 +116,7 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to bind main queue", "queue", mainQueue.Name, "error", err.Error())
 		return fmt.Errorf("queue bind: %w", err)
 	}
 
@@ -123,6 +132,7 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to declare DLQ", "queue", "transcoder.jobs.dlq", "error", err.Error())
 		return fmt.Errorf("dlq declare: %w", err)
 	}
 
@@ -138,11 +148,17 @@ func (p *Publisher) connect() error {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+		logger.Error("failed to bind DLQ", "queue", dlq.Name, "error", err.Error())
 		return fmt.Errorf("dlq bind: %w", err)
 	}
 
 	p.conn = conn
 	p.ch = ch
+	logger.Info("connected to RabbitMQ",
+		"exchange", "transcoder",
+		"queue", "transcoder.jobs",
+		"dlq", "transcoder.jobs.dlq",
+	)
 	return nil
 }
 
@@ -166,6 +182,10 @@ func (p *Publisher) publish(ctx context.Context, job TranscodeJob) error {
 }
 
 func (p *Publisher) PublishTranscodeJob(ctx context.Context, videoID, rawBlobURL, userID string) error {
+	start := time.Now()
+	logger := slog.With("component", "rabbitmq", "operation", "publish",
+		"video_id", videoID, "queue", "transcoder.jobs")
+
 	job := TranscodeJob{
 		VideoID:    videoID,
 		RawBlobURL: rawBlobURL,
@@ -173,26 +193,35 @@ func (p *Publisher) PublishTranscodeJob(ctx context.Context, videoID, rawBlobURL
 		UploadedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 
+	body, _ := json.Marshal(job)
+	logger.Info("publishing transcode job", "message_size_bytes", len(body), "user_id", userID)
+
 	err := p.publish(ctx, job)
 	if err == nil {
 		metrics.RabbitMQPublishedTotal.WithLabelValues("transcoder.jobs", "success").Inc()
+		logger.Info("publish succeeded", "duration_ms", time.Since(start).Milliseconds())
 		return nil
 	}
 
 	// If publish failed, try reconnecting once automatically
-	log.Printf("RabbitMQ publish failed: %v. Attempting to reconnect...", err)
+	logger.Warn("publish failed, attempting reconnect", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
 	if reconnErr := p.connect(); reconnErr != nil {
 		metrics.RabbitMQPublishedTotal.WithLabelValues("transcoder.jobs", "error").Inc()
+		logger.Error("reconnect failed", "original_error", err.Error(), "reconnect_error", reconnErr.Error())
 		return fmt.Errorf("publish failed and reconnect failed: original=%v, reconn=%w", err, reconnErr)
 	}
+
+	logger.Info("reconnected, retrying publish")
 
 	// Retry publish
 	if retryErr := p.publish(ctx, job); retryErr != nil {
 		metrics.RabbitMQPublishedTotal.WithLabelValues("transcoder.jobs", "error").Inc()
+		logger.Error("publish failed after reconnect", "error", retryErr.Error(), "duration_ms", time.Since(start).Milliseconds())
 		return fmt.Errorf("publish failed after reconnect: %w", retryErr)
 	}
 
 	metrics.RabbitMQPublishedTotal.WithLabelValues("transcoder.jobs", "success").Inc()
+	logger.Info("publish succeeded after reconnect", "duration_ms", time.Since(start).Milliseconds())
 	return nil
 }
 
@@ -204,10 +233,13 @@ func (p *Publisher) IsHealthy() error {
 }
 
 func (p *Publisher) Close() error {
+	logger := slog.With("component", "rabbitmq", "operation", "close")
+
 	if p.ch != nil {
 		p.ch.Close()
 	}
 	if p.conn != nil {
+		logger.Info("disconnected from RabbitMQ")
 		return p.conn.Close()
 	}
 	return nil

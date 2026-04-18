@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Transcoder struct {
@@ -61,7 +62,17 @@ func hasAudioStream(input string) bool {
 	return len(out) > 0
 }
 
+// truncateStderr returns the last maxLen characters of s for safe logging.
+func truncateStderr(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return "..." + s[len(s)-maxLen:]
+}
+
 func (t *Transcoder) Transcode(ctx context.Context, videoID, inputPath string) (*TranscodeResult, error) {
+	logger := slog.With("component", "ffmpeg", "video_id", videoID)
+	renditionCount := 4 // 1080p, 720p, 480p, 360p
 
 	outputDir := filepath.Join(t.TempDir, videoID, "output")
 
@@ -169,13 +180,30 @@ func (t *Transcoder) Transcode(ctx context.Context, videoID, inputPath string) (
 	cmd.Stderr = &stderr
 	cmd.Stdout = os.Stdout
 
-	log.Printf("Executing FFmpeg for video %s", videoID)
+	start := time.Now()
+	logger.Info("ffmpeg command starting",
+		"input_path", inputPath,
+		"rendition_count", renditionCount,
+		"has_audio", audioExists,
+	)
 
 	if err := cmd.Run(); err != nil {
+		exitCode := -1
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		}
+		logger.Error("ffmpeg execution failed",
+			"exit_code", exitCode,
+			"stderr_tail", truncateStderr(stderr.String(), 500),
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
 		return nil, fmt.Errorf("ffmpeg execution failed: %w\nstderr: %s", err, stderr.String())
 	}
 
-	log.Printf("FFmpeg finished successfully for video: %s", videoID)
+	logger.Info("ffmpeg completed successfully",
+		"exit_code", 0,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
 
 	result := &TranscodeResult{
 		VideoID:   videoID,

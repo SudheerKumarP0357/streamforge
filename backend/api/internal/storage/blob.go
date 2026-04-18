@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -81,6 +81,10 @@ func (s *BlobStorage) UploadRawVideo(ctx context.Context, videoID string, reader
 	}()
 
 	blobName := fmt.Sprintf("%s.mp4", videoID)
+	logger := slog.With("component", "blob_storage", "operation", "upload_raw_video",
+		"video_id", videoID, "blob_name", blobName, "container", s.rawContainer)
+
+	logger.Info("upload starting", "content_type", contentType, "size_bytes", size)
 
 	opts := &azblob.UploadStreamOptions{
 		BlockSize:   4 * 1024 * 1024, // 4MB
@@ -89,20 +93,26 @@ func (s *BlobStorage) UploadRawVideo(ctx context.Context, videoID string, reader
 
 	_, err := s.client.UploadStream(ctx, s.rawContainer, blobName, reader, opts)
 	if err != nil {
+		logger.Error("upload failed", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
 		return "", fmt.Errorf("failed to upload raw video stream: %w", err)
 	}
 
 	url := fmt.Sprintf("%s/%s/%s", s.endpoint, s.rawContainer, blobName)
+	logger.Info("upload succeeded", "duration_ms", time.Since(start).Milliseconds(), "bytes_uploaded", size)
 	return url, nil
 }
 
 func (s *BlobStorage) GenerateVideoDirectorySASURL(ctx context.Context, videoID string) (masterURL string, sasToken string, err error) {
+	logger := slog.With("component", "blob_storage", "operation", "generate_sas", "video_id", videoID)
+
 	cred, err := azdatalake.NewSharedKeyCredential(s.accountName, s.accountKey)
 	if err != nil {
+		logger.Error("failed to create datalake credential", "error", err.Error())
 		return "", "", fmt.Errorf("create datalake shared key credential: %w", err)
 	}
 
 	now := time.Now().UTC()
+	expiryTime := now.Add(2 * time.Hour)
 
 	perms := datalakesas.DirectoryPermissions{
 		Read:    true,
@@ -113,7 +123,7 @@ func (s *BlobStorage) GenerateVideoDirectorySASURL(ctx context.Context, videoID 
 	sv := datalakesas.DatalakeSignatureValues{
 		Protocol:       datalakesas.ProtocolHTTPS,
 		StartTime:      now.Add(-5 * time.Minute),
-		ExpiryTime:     now.Add(2 * time.Hour),
+		ExpiryTime:     expiryTime,
 		FileSystemName: s.hlsContainer,
 		DirectoryPath:  videoID,
 		Permissions:    perms.String(),
@@ -121,10 +131,20 @@ func (s *BlobStorage) GenerateVideoDirectorySASURL(ctx context.Context, videoID 
 
 	qp, err := sv.SignWithSharedKey(cred)
 	if err != nil {
+		logger.Error("failed to sign directory SAS", "error", err.Error())
 		return "", "", fmt.Errorf("sign directory SAS: %w", err)
 	}
 
 	enc := qp.Encode()
+
+	// Extract sr parameter to confirm directory-level SAS (sr=d)
+	srParam := "sr=?"
+	for _, p := range strings.Split(enc, "&") {
+		if strings.HasPrefix(p, "sr=") {
+			srParam = p
+			break
+		}
+	}
 
 	// blob endpoint for serving — dfs endpoint for signing
 	master := fmt.Sprintf(
@@ -132,17 +152,11 @@ func (s *BlobStorage) GenerateVideoDirectorySASURL(ctx context.Context, videoID 
 		s.accountName, s.hlsContainer, videoID, enc,
 	)
 
-	log.Printf("[SAS] video=%s sp=%s sr=%s expires=%s",
-		videoID, perms.String(),
-		func() string {
-			for _, p := range strings.Split(enc, "&") {
-				if strings.HasPrefix(p, "sr=") {
-					return p
-				}
-			}
-			return "sr=?"
-		}(),
-		now.Add(2*time.Hour).Format(time.RFC3339),
+	logger.Info("SAS token generated",
+		"expiry_time", expiryTime.Format(time.RFC3339),
+		"permissions", perms.String(),
+		"sr", srParam,
+		"container", s.hlsContainer,
 	)
 
 	// Return master URL and raw token separately
@@ -165,15 +179,22 @@ func (s *BlobStorage) UploadHLSFile(ctx context.Context, videoID, filename strin
 }
 
 func (s *BlobStorage) DeleteRawVideo(ctx context.Context, videoID string) error {
+	logger := slog.With("component", "blob_storage", "operation", "delete_raw_video", "video_id", videoID)
+
 	blobName := fmt.Sprintf("%s.mp4", videoID)
 	_, err := s.client.DeleteBlob(ctx, s.rawContainer, blobName, nil)
 	if err != nil {
+		logger.Error("failed to delete raw video blob", "blob_name", blobName, "error", err.Error())
 		return fmt.Errorf("failed to delete raw video: %w", err)
 	}
+
+	logger.Info("raw video blob deleted", "blob_name", blobName, "blobs_deleted", 1)
 	return nil
 }
 
 func (s *BlobStorage) DeleteHLSFolder(ctx context.Context, videoID string) error {
+	logger := slog.With("component", "blob_storage", "operation", "delete_hls_folder", "video_id", videoID)
+
 	// With HNS enabled, use the datalake client to delete the entire
 	// directory in a single API call instead of listing + deleting blobs individually
 	dirClient := s.datalake.NewFileSystemClient(s.hlsContainer).NewDirectoryClient(videoID)
@@ -183,12 +204,13 @@ func (s *BlobStorage) DeleteHLSFolder(ctx context.Context, videoID string) error
 		// If directory doesn't exist, treat as success — nothing to delete
 		var respErr *azcore.ResponseError
 		if errors.As(err, &respErr) && respErr.StatusCode == http.StatusNotFound {
-			log.Printf("[storage] HLS folder %s already deleted or never existed", videoID)
+			logger.Info("HLS folder already deleted or never existed")
 			return nil
 		}
+		logger.Error("failed to delete HLS directory", "error", err.Error())
 		return fmt.Errorf("failed to delete HLS directory %s: %w", videoID, err)
 	}
 
-	log.Printf("[storage] deleted HLS folder for video=%s", videoID)
+	logger.Info("HLS folder deleted", "container", s.hlsContainer, "blobs_deleted", 1)
 	return nil
 }

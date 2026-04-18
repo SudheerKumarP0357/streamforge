@@ -13,10 +13,9 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log the error — silenced in production via APP_ENV
-    logger.error('[ErrorBoundary]', 'Global error caught', {
-      message: error.message,
+    logger.error('Global error caught', error, {
+      component: 'ErrorBoundary',
       digest: error.digest,
-      stack: error.stack,
     });
   }, [error]);
 

@@ -9,34 +9,50 @@ import { logger } from '../../lib/logger';
 const BASE_URL = serverApiUrl;
 
 export default async function DashboardPage() {
+  const renderStart = Date.now();
   const cookieStore = await cookies();
   const token = cookieStore.get('sf_access_token')?.value;
+  const userId = token ? getUserIdFromToken(token) : null;
+
+  logger.info('dashboard render start', { page: 'dashboard', user_id: userId });
 
   let videos: Video[] = [];
 
   if (token) {
-    const userId = getUserIdFromToken(token);
+    const fetchPath = '/api/v1/videos?limit=50';
+    const fetchUrl = `${BASE_URL}${fetchPath}`;
 
-    const fetchUrl = `${BASE_URL}/api/v1/videos?limit=50`;
-    logger.serverFetch('GET', fetchUrl, { userId, backend: BASE_URL });
+    logger.info('fetch start', { page: 'dashboard', action: 'GET', endpoint: fetchPath, user_id: userId });
+    const fetchStart = Date.now();
 
     try {
       const res = await fetch(fetchUrl, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
-      logger.info('[DashboardPage]', 'Videos fetch response', { status: res.status, ok: res.ok });
+      const duration_ms = Date.now() - fetchStart;
+
+      logger.info('fetch result', {
+        page: 'dashboard', action: 'GET', endpoint: fetchPath,
+        status: res.status, success: res.ok, duration_ms, user_id: userId,
+      });
+
       if (res.ok) {
         const data = await res.json();
         videos = data.videos || [];
-        logger.info('[DashboardPage]', `Loaded ${videos.length} videos`);
       }
     } catch (e) {
-      logger.error('[DashboardPage]', 'Failed to fetch videos', e);
+      const duration_ms = Date.now() - fetchStart;
+      logger.error('fetch failed', e instanceof Error ? e : undefined, {
+        page: 'dashboard', action: 'GET', endpoint: fetchPath,
+        duration_ms, user_id: userId,
+      });
     }
   } else {
-    logger.warn('[DashboardPage]', 'No access token found in cookies');
+    logger.warn('No access token found in cookies', { page: 'dashboard' });
   }
+
+  logger.info('dashboard render complete', { page: 'dashboard', user_id: userId, duration_ms: Date.now() - renderStart });
 
   return (
     <div style={{ paddingTop: 'var(--nav-h)' }}>

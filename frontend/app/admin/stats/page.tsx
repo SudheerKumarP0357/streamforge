@@ -26,20 +26,20 @@ export default async function AdminStatsPage() {
   let stats: AdminStats | null = null;
   
   const fetchUrl = `${serverApiUrl}/api/v1/admin/stats`;
-  logger.serverFetch('GET', fetchUrl, { backend: serverApiUrl });
+  logger.debug(`GET ${fetchUrl}`, { component: 'AdminStatsPage', action: 'server-fetch', backend: serverApiUrl });
 
   try {
     const res = await fetch(fetchUrl, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store'
     });
-    logger.info('[AdminStatsPage]', 'Stats fetch response', { status: res.status });
+    logger.info('Stats fetch response', { component: 'AdminStatsPage', status: res.status });
     if (res.ok) {
       stats = await res.json();
-      logger.info('[AdminStatsPage]', 'Admin stats loaded', { totalUsers: stats?.total_users, totalVideos: stats?.total_videos });
+      logger.info('Admin stats loaded', { component: 'AdminStatsPage', totalUsers: stats?.total_users, totalVideos: stats?.total_videos });
     }
   } catch (e) {
-    logger.error('[AdminStatsPage]', 'Failed to fetch admin stats', e);
+    logger.error('Failed to fetch admin stats', e instanceof Error ? e : undefined, { component: 'AdminStatsPage' });
   }
 
   if (!stats) {

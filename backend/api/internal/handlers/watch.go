@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,6 +26,9 @@ func NewWatchHandler(cosmos *db.CosmosDB, pg *db.DB) *WatchHandler {
 }
 
 func (h *WatchHandler) SaveEvent(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	logger := slog.With("request_id", middleware.GetRequestID(r), "handler", "WatchHandler.SaveEvent")
+
 	userID := middleware.GetUserID(r)
 	if userID == "" {
 		respondError(w, http.StatusUnauthorized, "Unauthorized")
@@ -38,17 +41,21 @@ func (h *WatchHandler) SaveEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.Info("starting", "user_id", userID, "video_id", videoID)
+
 	var req struct {
 		EventType       string `json:"event_type"`
 		PositionSeconds int    `json:"position_seconds"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Warn("invalid request body", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.EventType != "play" && req.EventType != "pause" && req.EventType != "seek" && req.EventType != "end" {
+		logger.Warn("invalid event type", "event_type", req.EventType, "duration_ms", time.Since(start).Milliseconds())
 		respondError(w, http.StatusBadRequest, "Invalid event type")
 		return
 	}
@@ -64,7 +71,7 @@ func (h *WatchHandler) SaveEvent(w http.ResponseWriter, r *http.Request) {
 
 	err := h.cosmos.SaveWatchEvent(r.Context(), event)
 	if err != nil {
-		log.Printf("Failed to save watch event: %v", err)
+		logger.Error("failed to save watch event", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
 		respondError(w, http.StatusInternalServerError, "Failed to save event")
 		return
 	}
@@ -88,23 +95,29 @@ func (h *WatchHandler) SaveEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusCreated, map[string]string{"status": "recorded"})
+	logger.Info("completed", "outcome", "success", "event_type", req.EventType, "duration_ms", time.Since(start).Milliseconds())
 }
 
 type HistoryResponse struct {
-	VideoID         string             `json:"video_id"`
-	Title           string             `json:"title"`
-	WatchedAt       time.Time          `json:"watched_at"`
-	ProgressSeconds int                `json:"progress_seconds"`
-	DurationSeconds *int               `json:"duration_seconds"`
-	Completed       bool               `json:"completed"`
+	VideoID         string    `json:"video_id"`
+	Title           string    `json:"title"`
+	WatchedAt       time.Time `json:"watched_at"`
+	ProgressSeconds int       `json:"progress_seconds"`
+	DurationSeconds *int      `json:"duration_seconds"`
+	Completed       bool      `json:"completed"`
 }
 
 func (h *WatchHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	logger := slog.With("request_id", middleware.GetRequestID(r), "handler", "WatchHandler.GetHistory")
+
 	userID := middleware.GetUserID(r)
 	if userID == "" {
 		respondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+
+	logger.Info("starting", "user_id", userID)
 
 	limit := 20
 	limitStr := r.URL.Query().Get("limit")
@@ -119,7 +132,7 @@ func (h *WatchHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 
 	history, err := h.cosmos.GetWatchHistory(r.Context(), userID, limit)
 	if err != nil {
-		log.Printf("Failed to get watch history: %v", err)
+		logger.Error("failed to get watch history", "error", err.Error(), "duration_ms", time.Since(start).Milliseconds())
 		respondError(w, http.StatusInternalServerError, "Failed to get history")
 		return
 	}
@@ -149,4 +162,5 @@ func (h *WatchHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, map[string]interface{}{"history": results})
+	logger.Info("completed", "outcome", "success", "result_count", len(results), "duration_ms", time.Since(start).Milliseconds())
 }
