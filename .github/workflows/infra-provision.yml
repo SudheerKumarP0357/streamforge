@@ -9,6 +9,9 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - scripts/*
+      - k8s/*
 
 env:
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
