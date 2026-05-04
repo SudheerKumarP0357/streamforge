@@ -8,6 +8,7 @@ spec:
   parentRefs:
     - name: streamforge-gateway
       sectionName: https-listener
+      namespace: streamforge
   hostnames:
     - "argocd.sudheer.fun"
   rules:
