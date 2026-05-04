@@ -22,4 +22,4 @@ spec:
         statusCodes:
           - start: 200
             end: 299
-    useTLS: true
+    useTLS: false
