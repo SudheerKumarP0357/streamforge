@@ -1,0 +1,22 @@
+apiVersion: alb.networking.azure.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: frontend-health-check
+spec:
+  targetRef:
+    group: ""
+    kind: Service
+    name: sf-frontend-svc
+  default:
+    interval: 5s
+    timeout: 3s
+    healthyThreshold: 1
+    unhealthyThreshold: 1
+    port: 3000 # Port number for Containers not the Service port number
+    http:
+      path: /api/health
+      match:
+        statusCodes:
+          - start: 200
+            end: 299
+    useTLS: false

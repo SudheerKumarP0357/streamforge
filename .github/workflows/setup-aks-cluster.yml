@@ -153,3 +153,52 @@ jobs:
 
       - name: Verify Cert Manager pods
         run: kubectl get pods -n cert-manager
+  setup-argocd:
+    name: Setup ArgoCD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Get AKS Cluster Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ github.event.inputs.resource_group_name }} \
+            --name ${{ github.event.inputs.aks_cluster_name }} \
+            --overwrite-existing && \
+          kubectl cluster-info
+
+      - name: Install ArgoCD using Helm
+        run: |
+          # Add the argo-cd repo 
+          helm repo add argo https://argoproj.github.io/argo-helm
+
+          # Update the argocd-helm repo
+          helm repo update
+
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(helm list -n argocd --filter "^argo-cd$" -o json | jq -r '.[0].chart')
+
+          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.11" ]]; then  
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            helm upgrade --install \
+              argocd https://argoproj.github.io/argo-helm \
+              --version 9.5.11 \
+              --namespace argocd \
+              --create-namespace \
+              --set crds.enabled=true
+          fi
+
+      - name: Wait for the Cert Manager resources Ready
+        run: kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector
+          helm.sh/chart=cert-manager-v1.20.2 -n cert-manager
+          --for=condition=Ready --timeout=600s
+
+      - name: Verify Cert Manager pods
+        run: kubectl get pods -n cert-manager
