@@ -17,9 +17,9 @@ spec:
     - server auth
     - digital signature
     - key encipherment
-  commonName: placeholder
+  commonName: "*.sudheer.fun"
   dnsNames:
-    - placeholder
+    - "*.sudheer.fun"
   issuerRef:
     name: cloudflare-cluster-issuer
     kind: ClusterIssuer
