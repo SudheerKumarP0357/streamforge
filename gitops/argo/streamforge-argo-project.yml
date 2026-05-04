@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: streamforge
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  description: Streaforge Project
+  sourceRepos:
+    - "https://github.com/SudheerKumarP0357/streamforge.git"
+  destinations:
+    - namespace: streamforge*
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: "cert-manager.io"
+      kind: ClusterIssuer
+  namespaceResourceWhitelist:
+    - group: "apps"
+      kind: Deployment
+    - group: "apps"
+      kind: StatefulSet
+    - group: "autoscaling"
+      kind: "HorizontalPodAutoscaler"
+    - group: ""
+      kind: Service
+    - group: "cert-manager.io"
+      kind: Certificate
+    - group: ""
+      kind: PersistentVolumeClaim
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: ServiceAccount
+    - group: "secrets-store.csi.x-k8s.io"
+      kind: SecretProviderClass
+    - group: alb.networking.azure.io
+      kind: HealthCheckPolicy
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute

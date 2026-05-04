@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Type "destroy" to confirm'
+        description: "Type \"destroy\" to confirm"
         required: true
         type: string
       terraform_run_id:
@@ -96,23 +96,23 @@ jobs:
       - name: Terraform Plan Destroy
         run: terraform plan -destroy -out=secrets-destroy.tfplan
 
-      - name: Post Plan Summary
-        run: |
-          echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
-          terraform show secrets-destroy.tfplan >> $GITHUB_STEP_SUMMARY
+      # - name: Post Plan Summary
+      #   run: |
+      #     echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
+      #     terraform show secrets-destroy.tfplan >> $GITHUB_STEP_SUMMARY
 
-      - name: Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: SudheerKumarP0357
-          minimum-approvals: 1
-          issue-title: "🔴 Approval Required — Destroy KeyVault Secrets"
-          issue-body: |
-            Triggered by: **${{ github.actor }}**
-            Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Reply **approve** to proceed or **deny** to cancel.
-          fail-on-denial: true
+      # - name: Manual Approval
+      #   uses: trstringer/manual-approval@v1
+      #   with:
+      #     secret: ${{ secrets.GITHUB_TOKEN }}
+      #     approvers: SudheerKumarP0357
+      #     minimum-approvals: 1
+      #     issue-title: "🔴 Approval Required — Destroy KeyVault Secrets"
+      #     issue-body: |
+      #       Triggered by: **${{ github.actor }}**
+      #       Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #       Reply **approve** to proceed or **deny** to cancel.
+      #     fail-on-denial: true
 
       - name: Terraform Apply Destroy
         run: terraform apply -auto-approve secrets-destroy.tfplan
@@ -128,7 +128,7 @@ jobs:
 
   destroy-infra:
     name: Destroy Infrastructure
-    needs: [validate-intent, destroy-secrets]
+    needs: [ validate-intent, destroy-secrets ]
     if: success() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
@@ -161,23 +161,23 @@ jobs:
             -var="public_key_openssh=${{secrets.PUBLIC_KEY_PERSONAL}}" \
             -out=infra-destroy.tfplan
 
-      - name: Post Plan Summary
-        run: |
-          echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
-          terraform show infra-destroy.tfplan >> $GITHUB_STEP_SUMMARY
+      # - name: Post Plan Summary
+      #   run: |
+      #     echo "## 🔴 Secrets to be Destroyed" >> $GITHUB_STEP_SUMMARY
+      #     terraform show infra-destroy.tfplan >> $GITHUB_STEP_SUMMARY
 
-      - name: Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: SudheerKumarP0357
-          minimum-approvals: 1
-          issue-title: "🔴 Approval Required — Destroy Complete infrastructure"
-          issue-body: |
-            Triggered by: **${{ github.actor }}**
-            Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Reply **approve** to proceed or **deny** to cancel.
-          fail-on-denial: true
+      # - name: Manual Approval
+      #   uses: trstringer/manual-approval@v1
+      #   with:
+      #     secret: ${{ secrets.GITHUB_TOKEN }}
+      #     approvers: SudheerKumarP0357
+      #     minimum-approvals: 1
+      #     issue-title: "🔴 Approval Required — Destroy Complete infrastructure"
+      #     issue-body: |
+      #       Triggered by: **${{ github.actor }}**
+      #       Review the plan: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #       Reply **approve** to proceed or **deny** to cancel.
+      #     fail-on-denial: true
 
       - name: Terraform Apply Destroy
         run: terraform apply -auto-approve infra-destroy.tfplan
