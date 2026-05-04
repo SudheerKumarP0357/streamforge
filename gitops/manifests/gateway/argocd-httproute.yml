@@ -9,12 +9,13 @@ spec:
     - name: streamforge-gateway
       sectionName: https-listener
   hostnames:
-    - "streamforge.sudheer.fun"
+    - "argocd.sudheer.fun"
   rules:
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: sf-frontend-svc
-          port: 80
+        - name: argocd-server
+          namespace: argocd
+          port: 443

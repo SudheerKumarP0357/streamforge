@@ -1,22 +1,23 @@
 apiVersion: alb.networking.azure.io/v1
 kind: HealthCheckPolicy
 metadata:
-  name: frontend-health-check
+  name: argocd-health-check
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   targetRef:
     group: ""
     kind: Service
-    name: sf-frontend-svc
+    name: argocd-server
+    namespace: argocd
   default:
     interval: 5s
     timeout: 3s
     healthyThreshold: 1
     unhealthyThreshold: 1
-    port: 3000 # Port number for Containers not the Service port number
+    port: 8080 # Port number for Containers not the Service port number
     http:
-      path: /api/health
+      path: /healthz?full=true
       match:
         statusCodes:
           - start: 200
