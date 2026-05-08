@@ -190,13 +190,13 @@ jobs:
       run:
         working-directory: ./infra/terraform
 
-    outputs:
-      TF_VAR_ resource_group_name: ${{}}
-      TF_VAR_ storage_account_name: ${{}}
-      TF_VAR_ key_vault_name: ${{}}
-      TF_VAR_ postgres_administrator_password: ${{}}
-      TF_VAR_ cosmos_cluster_connection_string: ${{}}
-      TF_VAR_ redis_name: ${{}}
+    # outputs:
+    #   TF_VAR_ resource_group_name: ${{}}
+    #   TF_VAR_ storage_account_name: ${{}}
+    #   TF_VAR_ key_vault_name: ${{}}
+    #   TF_VAR_ postgres_administrator_password: ${{}}
+    #   TF_VAR_ cosmos_cluster_connection_string: ${{}}
+    #   TF_VAR_ redis_name: ${{}}
 
     # aks_cluster_name = "streamforgedevci"
     # alb_subnet_id = "/subscriptions/072b086b-63e3-454f-bba9-b1afb4e9d7f7/resourceGroups/rg-streamforge-dev-ci/providers/Microsoft.Network/virtualNetworks/vnet-streamforge-dev-ci/subnets/alb-subnet"
