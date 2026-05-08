@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: streamforge-gateway
+  name: argocd-gateway
   labels:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
@@ -18,16 +18,13 @@ spec:
       hostname: "*.sudheer.fun"
       allowedRoutes:
         namespaces:
-          from: Selector
-          selector:
-          matchLabels:
-            shared-gateway-access: "true"
+          from: Same
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
             group: ""
-            name: streamforge-tls-secret
+            name: argocd-tls-secret
     - name: http-listener
       port: 80
       protocol: HTTP

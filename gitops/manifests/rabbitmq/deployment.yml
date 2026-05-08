@@ -1,7 +1,5 @@
----
-# --------- Deployment : RabbitMQ ---------
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: sf-rabbitmq
   labels:
@@ -10,6 +8,7 @@ metadata:
     app.kubernetes.io/component: queue
     azure.workload.identity/use: "true"
 spec:
+  serviceName: sf-rabbitmq-svc
   replicas: 1
   selector:
     matchLabels:
@@ -22,7 +21,19 @@ spec:
         app.kubernetes.io/name: rabbitmq
         app.kubernetes.io/part-of: streamforge-application
         app.kubernetes.io/component: queue
+        azure.workload.identity/use: "true"
     spec:
+      volumeClaimTemplates:
+        - metadata:
+            name: sf-rabbitmq-data
+          spec:
+            accessModes: [ "ReadWriteOnce" ]
+            storageClassName: "managed-csi"
+            volumeMode: Filesystem
+            resources:
+              requests:
+                storage: 500Mi
+
       serviceAccountName: "sf-workload-sa"
       affinity:
         podAntiAffinity:
@@ -79,15 +90,12 @@ spec:
             timeoutSeconds: 5
           volumeMounts:
             - name: sf-rabbitmq-data
-              mountPath: /var/lib/rabbitmq
+              mountPath: /var/lib/rabbitmq/mnesia
             - name: sf-secrets
               mountPath: "/mnt/secrets-store"
               readOnly: true
 
       volumes:
-        - name: sf-rabbitmq-data
-          persistentVolumeClaim:
-            claimName: pvc-streamforge-rabbitmq
         - name: sf-secrets
           csi:
             driver: secrets-store.csi.k8s.io

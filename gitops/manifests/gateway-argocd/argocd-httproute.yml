@@ -6,9 +6,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   parentRefs:
-    - name: streamforge-gateway
+    - name: argocd-gateway
       sectionName: https-listener
-      namespace: streamforge
   hostnames:
     - "argocd.sudheer.fun"
   rules:

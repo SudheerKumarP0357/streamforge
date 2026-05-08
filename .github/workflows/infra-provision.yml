@@ -190,6 +190,25 @@ jobs:
       run:
         working-directory: ./infra/terraform
 
+    outputs:
+      TF_VAR_ resource_group_name: ${{}}
+      TF_VAR_ storage_account_name: ${{}}
+      TF_VAR_ key_vault_name: ${{}}
+      TF_VAR_ postgres_administrator_password: ${{}}
+      TF_VAR_ cosmos_cluster_connection_string: ${{}}
+      TF_VAR_ redis_name: ${{}}
+
+    # aks_cluster_name = "streamforgedevci"
+    # alb_subnet_id = "/subscriptions/072b086b-63e3-454f-bba9-b1afb4e9d7f7/resourceGroups/rg-streamforge-dev-ci/providers/Microsoft.Network/virtualNetworks/vnet-streamforge-dev-ci/subnets/alb-subnet"
+    # azure_alb_identity = "e2c33632-45ee-4346-a075-c35df046c8ac"
+    # cosmos_cluster_connection_string = <sensitive>
+    # postgres_database_name = "streamforge"
+    # postgres_password = <sensitive>
+    # postgres_server_name = "psqlstreamforgedevci.postgres.database.azure.com"
+    # redis_hostname = "amrstreamforgedev.centralindia.redis.azure.net"
+    # redis_name = "amrstreamforgedev"
+    # storage_account_blob_endpoint = "https://ststreamforgedevci.blob.core.windows.net/"
+    # workload_identity_client_id = "7fa43c11-b559-48fe-8504-f4d7fbd0c049"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -215,21 +234,112 @@ jobs:
         id: apply
         run: terraform apply -auto-approve main.tfplan
 
-      - name: Terraform Output For KeyVault Secrets
-        run: |
-          echo "TF_VAR_resource_group_name=$(terraform output -raw resource_group_name)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_storage_account_name=$(terraform output -raw storage_account_name)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_key_vault_name=$(terraform output -raw key_vault_name)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_postgres_administrator_password=$(terraform output -raw postgres_password)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_cosmos_cluster_connection_string=$(terraform output -raw cosmos_cluster_connection_string)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_redis_name=$(terraform output -raw redis_name)" >> key_vault_secrets_data.txt
-          echo "TF_VAR_jwt_secret=${{secrets.JWT_SECRET}}" >> key_vault_secrets_data.txt
-          echo "TF_VAR_rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" >> key_vault_secrets_data.txt
-          echo "TF_VAR_rabbitmq_default_user=${{vars.RABBITMQ_USER}}" >> key_vault_secrets_data.txt
+      # - name: Terraform Output For KeyVault Secrets
+      #   run: |
+      #     echo "TF_VAR_resource_group_name=$(terraform output -raw resource_group_name)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_storage_account_name=$(terraform output -raw storage_account_name)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_key_vault_name=$(terraform output -raw key_vault_name)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_postgres_administrator_password=$(terraform output -raw postgres_password)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_cosmos_cluster_connection_string=$(terraform output -raw cosmos_cluster_connection_string)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_redis_name=$(terraform output -raw redis_name)" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_jwt_secret=${{secrets.JWT_SECRET}}" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_rabbitmq_default_pass=${{secrets.RABBITMQ_PASSWORD}}" >> key_vault_secrets_data.txt
+      #     echo "TF_VAR_rabbitmq_default_user=${{vars.RABBITMQ_USER}}" >> key_vault_secrets_data.txt
 
-      - name: Upload Terraform Output
-        uses: actions/upload-artifact@v4
-        with:
-          name: key-vault-secrets
-          path: infra/terraform/key_vault_secrets_data.txt
-          retention-days: 1
+      # - name: Upload Terraform Output
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: key-vault-secrets
+      #     path: infra/terraform/key_vault_secrets_data.txt
+      #     retention-days: 1
+
+  # provision-secrets:
+  #   name: Provision KeyVault Secrets
+  #   defaults:
+  #     run:
+  #       working-directory: ./infra/secrets
+
+  #   runs-on: ubuntu-latest
+  #   needs: [terraform-apply]
+  #   steps:
+  #     - uses: actions/checkout@v6
+
+  #     - name: Login to Azure
+  #       uses: azure/login@v2
+  #       with:
+  #         client-id: ${{ secrets.ARM_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.ARM_TENANT_ID }}
+  #         subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+  #     - name: Download Terraform Output
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: key-vault-secrets
+  #         path: infra/secrets
+
+  #     - name: Export Variables
+  #       run: |
+  #         while IFS='=' read -r key value; do
+  #           echo "$key=$value" >> $GITHUB_ENV
+  #         done < key_vault_secrets_data.txt
+
+  #     - name: Get Runner IP
+  #       id: runner_ip
+  #       run: echo "ip=$(curl -s ifconfig.me/ip)" >> $GITHUB_OUTPUT
+
+  #     - name: Temporarily Open Keyvault to public
+  #       id: open_kv
+  #       run: |
+  #         az keyvault update --name ${TF_VAR_key_vault_name} --public-network-access Enabled
+  #         az keyvault network-rule add \
+  #           --name ${TF_VAR_key_vault_name} \
+  #           --ip-address ${{ steps.runner_ip.outputs.ip }} \
+  #           --resource-group ${TF_VAR_resource_group_name}
+
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v4
+
+  #     - name: Terraform Format
+  #       id: fmt
+  #       run: terraform fmt -check
+
+  #     - name: Terraform Init
+  #       id: init
+  #       run: |
+  #         terraform init \
+  #           -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+  #           -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+  #           -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
+  #           -backend-config="key=${{ secrets.KV_BACKEND_KEY }}"
+
+  #     - name: Terraform Validate
+  #       id: validate
+  #       run: terraform validate
+
+  #     - name: Terraform Plan
+  #       id: plan
+  #       run: terraform plan -out=secrets.tfplan
+
+  #     # Removing the Manual approval for creating the secrets
+  #     # - uses: trstringer/manual-approval@v1
+  #     #   name: Review and Approve KeyVault Secrets
+  #     #   with:
+  #     #     secret: ${{ github.TOKEN }}
+  #     #     approvers: SudheerKumarP0357
+  #     #     minimum-approvals: 1
+  #     #     issue-title: "Manual Approval Required for Terraform Apply"
+  #     #     issue-body: "Please approve or deny the deployment."
+  #     #     fail-on-denial: true
+
+  #     - name: Terraform Apply
+  #       id: apply
+  #       run: terraform apply -auto-approve secrets.tfplan
+
+  #     - name: Close Keyvault to public
+  #       if: always()
+  #       run: |
+  #         az keyvault update --name ${TF_VAR_key_vault_name} --public-network-access Disabled
+  #         az keyvault network-rule remove \
+  #           --name ${TF_VAR_key_vault_name} \
+  #           --ip-address ${{ steps.runner_ip.outputs.ip }} \
+  #           --resource-group ${TF_VAR_resource_group_name}

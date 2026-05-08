@@ -1,5 +1,3 @@
----
-# --------- Service : RabbitMQ ---------
 apiVersion: v1
 kind: Service
 metadata:
@@ -17,4 +15,4 @@ spec:
     - port: 5672
       targetPort: 5672
       name: amqp
-  type: ClusterIP
+  clusterIP: None
