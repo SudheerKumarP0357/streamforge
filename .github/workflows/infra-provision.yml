@@ -312,7 +312,7 @@ jobs:
           -var "key_vault_name=${{ needs.terraform-apply.outputs.key_vault_name }}"
           -var "storage_account_name=${{ needs.terraform-apply.outputs.storage_account_name }}"
           -var "postgres_server_name=${{ needs.terraform-apply.outputs.postgres_server_name }}"
-          -var "postgres_user=${{ var.POSTGRES_USERNAME }}"
+          -var "postgres_user=${{ vars.POSTGRES_USERNAME }}"
           -var "postgres_password=${{ secrets.POSTGRES_PASSWORD }}"
           -var "postgres_database=${{ vars.POSTGRES_DATABASE }}"
           -var "cosmos_cluster_connection_string=${{ needs.terraform-apply.outputs.cosmos_cluster_connection_string }}"
