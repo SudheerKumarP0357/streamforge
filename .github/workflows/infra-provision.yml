@@ -243,7 +243,7 @@ jobs:
           echo "key_vault_name=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
           echo "cosmos_cluster_connection_string=$(terraform output -raw cosmos_cluster_connection_string)" >> $GITHUB_OUTPUT
           echo "redis_hostname=$(terraform output -raw redis_hostname)" >> $GITHUB_OUTPUT
-          echo "aks_clutser_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
+          echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
 
@@ -265,11 +265,11 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Download Terraform Output
-        uses: actions/download-artifact@v4
-        with:
-          name: key-vault-secrets
-          path: infra/secrets
+      # - name: Download Terraform Output
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: key-vault-secrets
+      #     path: infra/secrets
 
       - name: Get Runner IP
         id: runner_ip
@@ -351,7 +351,7 @@ jobs:
         run: |
           az aks get-credentials \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_clutser_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
             --overwrite-existing && \
           kubectl cluster-info
 
@@ -435,7 +435,7 @@ jobs:
         run: |
           az aks get-credentials \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_clutser_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
             --overwrite-existing && \
           kubectl cluster-info
 
@@ -484,7 +484,7 @@ jobs:
         run: |
           az aks get-credentials \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_clutser_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
             --overwrite-existing && \
           kubectl cluster-info
 
