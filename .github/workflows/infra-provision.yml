@@ -314,7 +314,7 @@ jobs:
           -var "postgres_server_name=${{ needs.terraform-apply.outputs.postgres_server_name }}"
           -var "postgres_user=${{ var.POSTGRES_USERNAME }}"
           -var "postgres_password=${{ secrets.POSTGRES_PASSWORD }}"
-          -var "postgres_database=${{ var.POSTGRES_DATABASE }}"
+          -var "postgres_database=${{ vars.POSTGRES_DATABASE }}"
           -var "cosmos_cluster_connection_string=${{ needs.terraform-apply.outputs.cosmos_cluster_connection_string }}"
           -var "redis_hostname=${{ needs.terraform-apply.outputs.redis_hostname }}"
           -var "jwt_secret=${{ secrets.JWT_SECRET }}"
