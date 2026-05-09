@@ -27,7 +27,7 @@ spec:
         - metadata:
             name: sf-rabbitmq-data
           spec:
-            accessModes: [ "ReadWriteOnce" ]
+            accessModes: ["ReadWriteOnce"]
             storageClassName: "managed-csi"
             volumeMode: Filesystem
             resources:
@@ -64,8 +64,8 @@ spec:
           env:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
-                configMapKeyRef:
-                  name: sf-configmaps
+                secretKeyRef:
+                  name: sf-secrets
                   key: RABBITMQ_DEFAULT_USER
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:

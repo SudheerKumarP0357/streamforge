@@ -15,7 +15,6 @@ spec:
       app.kubernetes.io/name: api
       app.kubernetes.io/part-of: streamforge-application
       app.kubernetes.io/component: backend
-  replicas: 1
   template:
     metadata:
       labels:

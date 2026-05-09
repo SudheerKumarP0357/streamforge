@@ -42,10 +42,6 @@ output "cosmos_cluster_connection_string" {
   sensitive = true
 }
 
-# output "acr_login_server" {
-#   value = azurerm_container_registry.acr.login_server
-# }
-
 output "aks_cluster_name" {
   value = azurerm_kubernetes_cluster.main.name
 }
@@ -54,17 +50,13 @@ output "workload_identity_client_id" {
   value = azurerm_user_assigned_identity.sf_workload_identity.client_id
 }
 
-# output "jump_server_user_name" {
-#   value = azurerm_linux_virtual_machine.jump_server.admin_username
-# }
-
-# output "jump_server_pip" {
-#   value = azurerm_linux_virtual_machine.jump_server.public_ip_address
-# }
-
 output "alb_subnet_id" {
   value = azurerm_subnet.alb_subnet.id
 }
 output "azure_alb_identity" {
   value = azurerm_user_assigned_identity.alb_uami.client_id
+}
+
+output "redis_port" {
+  value = azurerm_managed_redis.main.default_database[0].port
 }
