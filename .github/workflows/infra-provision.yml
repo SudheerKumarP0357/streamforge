@@ -209,9 +209,9 @@ jobs:
       postgres_server_name: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
       cosmos_cluster_connection_string: ${{ steps.terraform_outputs.outputs.cosmos_cluster_connection_string }}
       redis_hostname: ${{ steps.terraform_outputs.outputs.redis_hostname }}
-      aks_cluster_name: ${{ steps.terraform_outputs.outputs.aks_cluster_name}}
-      alb_client_id: ${{ steps.terraform_outputs.outputs.alb_client_id}}
-      alb_subnet_id: ${{ steps.terraform_outputs.outputs.alb_subnet_id}}
+      aks_cluster_name: ${{ steps.terraform_outputs.outputs.aks_cluster_name }}
+      alb_client_id: ${{ steps.terraform_outputs.outputs.alb_client_id }}
+      alb_subnet_id: ${{ steps.terraform_outputs.outputs.alb_subnet_id }}
 
     steps:
       - name: Checkout
@@ -412,10 +412,10 @@ jobs:
 
       - name: Wait for the ApplicationLoadBalancer Deployment
         run: |
-          kubectl wait \ 
-          --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
+          kubectl wait \
           applicationloadbalancer/alb-infra \
-          -n azure-alb-system \ 
+          -n azure-alb-system \
+          --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
           --timeout=600s
 
       - name: Verify ApplicationLoadBalancer is running
@@ -462,11 +462,11 @@ jobs:
 
       - name: Wait for the Cert Manager resources Ready
         run: |
-          kubectl wait pod \ 
-          --selector app.kubernetes.io/version=v1.20.2  \ 
-          --selector helm.sh/chart=cert-manager-v1.20.2 \ 
-          -n cert-manager \ 
-          --for=condition=Ready \ 
+          kubectl wait pod \
+          --selector app.kubernetes.io/version=v1.20.2  \
+          --selector helm.sh/chart=cert-manager-v1.20.2 \
+          -n cert-manager \
+          --for=condition=Ready \
           --timeout=600s
 
       - name: Verify Cert Manager pods

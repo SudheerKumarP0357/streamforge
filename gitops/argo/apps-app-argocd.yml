@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-streamforge
+  namespace: argocd
+  labels:
+    name: apps
+    project: streamforge
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: streamforge
+  source:
+    repoURL: https://github.com/SudheerKumarP0357/streamforge.git
+    targetRevision: HEAD
+    path: gitops/argo
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+      - SkipDryRunOnMissingResource=true
+  revisionHistoryLimit: 10

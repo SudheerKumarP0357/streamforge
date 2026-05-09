@@ -81,7 +81,8 @@ jobs:
         run: kubectl get pods -n ${{ github.event.inputs.alb_controller_namespace }}
 
       - name: Wait for GatewayClass to be accepted
-        run: kubectl wait gatewayclass azure-alb-external --for=condition=Accepted
+        run:
+          kubectl wait gatewayclass azure-alb-external --for=condition=Accepted
           --timeout=600s
 
       - name: Verify GatewayClass azure-alb-external is installed
@@ -147,7 +148,8 @@ jobs:
           fi
 
       - name: Wait for the Cert Manager resources Ready
-        run: kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector
+        run:
+          kubectl wait pod --selector app.kubernetes.io/version=v1.20.2  --selector
           helm.sh/chart=cert-manager-v1.20.2 -n cert-manager
           --for=condition=Ready --timeout=600s
 
