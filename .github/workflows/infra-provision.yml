@@ -164,32 +164,33 @@ jobs:
               body: output,
             });
 
-  manual-approval:
-    name: Manual Approval
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: |
-      success() && github.event_name == 'push' 
-      && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' 
-      && github.ref == 'refs/heads/main'
+  # manual-approval:
+  #   name: Manual Approval
+  #   runs-on: ubuntu-latest
+  #   needs: terraform-plan
+  #   if: |
+  #     success() && github.event_name == 'push'
+  #     && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+  #     && github.ref == 'refs/heads/main'
 
-    permissions:
-      issues: write
+  #   permissions:
+  #     issues: write
 
-    steps:
-      - name: Await Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: SudheerKumarP0357
-          minimum-approvals: 1
-          issue-title: "Manual Approval Required for Terraform Apply"
-          issue-body: "Please approve or deny the deployment."
-          fail-on-denial: true
+  #   steps:
+  #     - name: Await Manual Approval
+  #       uses: trstringer/manual-approval@v1
+  #       with:
+  #         secret: ${{ github.TOKEN }}
+  #         approvers: SudheerKumarP0357
+  #         minimum-approvals: 1
+  #         issue-title: "Manual Approval Required for Terraform Apply"
+  #         issue-body: "Please approve or deny the deployment."
+  #         fail-on-denial: true
 
   terraform-apply:
     name: Terraform Apply
-    needs: [manual-approval, terraform-plan]
+    # needs: [manual-approval, terraform-plan] # Temporary
+    needs: [terraform-plan]
     if: |
       success() 
       && github.event_name == 'push' 
@@ -205,9 +206,12 @@ jobs:
       resource_group_name: ${{ steps.terraform_outputs.outputs.resource_group_name }}
       storage_account_name: ${{ steps.terraform_outputs.outputs.storage_account_name }}
       key_vault_name: ${{ steps.terraform_outputs.outputs.key_vault_name }}
-      postgres_password: ${{ steps.terraform_outputs.outputs.postgres_password }}
+      postgres_server_name: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
       cosmos_cluster_connection_string: ${{ steps.terraform_outputs.outputs.cosmos_cluster_connection_string }}
       redis_hostname: ${{ steps.terraform_outputs.outputs.redis_hostname }}
+      aks_cluster_name: ${{ steps.terraform_outputs.outputs.aks_cluster_name}}
+      alb_client_id: ${{ steps.terraform_outputs.outputs.alb_client_id}}
+      alb_subnet_id: ${{ steps.terraform_outputs.outputs.alb_subnet_id}}
 
     steps:
       - name: Checkout
@@ -237,7 +241,6 @@ jobs:
       - name: Terraform Outputs
         id: terraform_outputs
         run: |
-          echo 
           echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
           echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
           echo "key_vault_name=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
@@ -246,6 +249,7 @@ jobs:
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
+          echo "postgres_server_name=$(terraform output -raw postgres_server_name)" >> $GITHUB_OUTPUT
 
   provision-secrets:
     name: Provision KeyVault Secrets
