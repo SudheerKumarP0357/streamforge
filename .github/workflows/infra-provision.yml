@@ -277,7 +277,7 @@ jobs:
           echo '${{ toJSON(needs.terraform-apply.outputs) }}'
           ALB_SUBNET_ID=$(echo "${{ needs.terraform-apply.outputs.alb_subnet_id }}" | base64 -d)
           ALB_SUBNET_ID_DOUBLE=$(echo -n "${{ needs.terraform-apply.outputs.alb_subnet_id }}" | base64 -d | base64 -d)
-          echo "::add-mask::$ALB_SUBNET_ID_DOUBLE"
+          # echo "::add-mask::$ALB_SUBNET_ID_DOUBLE"
 
           # 4. Use the resource ID in an Azure CLI command or elsewhere
           echo "Processing resource: $ALB_SUBNET_ID_DOUBLE"
