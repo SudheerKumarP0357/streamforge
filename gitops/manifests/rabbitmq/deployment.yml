@@ -15,6 +15,16 @@ spec:
       app.kubernetes.io/name: rabbitmq
       app.kubernetes.io/part-of: streamforge-application
       app.kubernetes.io/component: queue
+  volumeClaimTemplates:
+    - metadata:
+        name: sf-rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "managed-csi"
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 500Mi
   template:
     metadata:
       labels:
@@ -23,17 +33,6 @@ spec:
         app.kubernetes.io/component: queue
         azure.workload.identity/use: "true"
     spec:
-      volumeClaimTemplates:
-        - metadata:
-            name: sf-rabbitmq-data
-          spec:
-            accessModes: ["ReadWriteOnce"]
-            storageClassName: "managed-csi"
-            volumeMode: Filesystem
-            resources:
-              requests:
-                storage: 500Mi
-
       serviceAccountName: "sf-workload-sa"
       affinity:
         podAntiAffinity:
