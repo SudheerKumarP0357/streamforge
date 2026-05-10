@@ -280,7 +280,7 @@ jobs:
           echo "::add-mask::$ALB_SUBNET_ID_DOUBLE"
 
           # 4. Use the resource ID in an Azure CLI command or elsewhere
-          echo "Processing resource: $DECOALB_SUBNET_ID_DOUBLEDED_ID"
+          echo "Processing resource: $ALB_SUBNET_ID_DOUBLE"
 
   # setup-alb-controller:
   #   name: Install ALB Controller
