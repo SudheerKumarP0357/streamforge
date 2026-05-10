@@ -74,6 +74,7 @@ jobs:
             -no-color \
             -var="postgres_administrator_username=${{ vars.POSTGRES_USERNAME }}" \
             -var="postgres_administrator_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -var="postgres_database_name=${{ vars.POSTGRES_DATABASE }}" \
             -var="cosmos_administrator_username=${{ vars.COSMOS_USERNAME }}" \
             -var="cosmos_administrator_password=${{ secrets.COSMOS_PASSWORD }}" \
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
