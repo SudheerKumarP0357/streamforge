@@ -20,10 +20,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
 
-    managedNamespaceMetadata:
-      labels:
-        shared-gateway-access: "true"
-
   syncPolicy:
     automated:
       enabled: true
@@ -36,3 +32,6 @@ spec:
       - ApplyOutOfSyncOnly=true
       - SkipDryRunOnMissingResource=true
   revisionHistoryLimit: 10
+  managedNamespaceMetadata:
+    labels:
+      shared-gateway-access: "true"
