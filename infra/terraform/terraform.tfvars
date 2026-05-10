@@ -6,26 +6,18 @@ vnet_app_addr_space         = "10.10.0.0/16"
 vnet_jump_addr_space        = "10.9.0.0/16"
 
 # cosmos
-cosmos_administrator_username = "Streamforge"
-cosmos_compute_tier           = "Free"
+cosmos_compute_tier = "Free"
 
 # postgres
-# postgres_administrator_username = "Streamforge"
 postgres_server_version = 17
 postgres_storage_in_mb  = 32768
 postgres_storage_tier   = "P4"
 postgres_sku            = "B_Standard_B1ms"
-postgres_database_name  = "streamforge"
 postgres_extensions     = "PGCRYPTO,UUID-OSSP"
 
 
 # Managed Redis
 redis_sku_name = "Balanced_B0"
-
-
-# Key Vault
-# key_vault_admin_object_id = "71585d88-7d50-4edc-b591-52f60aa5de92"
-
 
 # ACR
 acr_sku = "Basic"

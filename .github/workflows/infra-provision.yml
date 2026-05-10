@@ -28,9 +28,7 @@ permissions:
 jobs:
   terraform-plan:
     name: Terraform Plan
-    if: |
-      github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' 
-      && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && ( github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' )
     defaults:
       run:
         working-directory: ./infra/terraform
@@ -74,12 +72,13 @@ jobs:
         run: |
           terraform plan \
             -no-color \
-            -var="postgres_administrator_password=${{secrets.POSTGRES_PASSWORD}}" \
             -var="postgres_administrator_username=${{ vars.POSTGRES_USERNAME }}" \
-            -var="cosmos_administrator_password=${{secrets.COSMOS_PASSWORD}}" \
-            -var="jwt_secret=${{secrets.JWT_SECRET}}" \
-            -var="key_vault_admin_object_id=${{vars.KV_ADMIN_OBJECT_ID}}" \
-            -var="public_key_openssh=${{secrets.PUBLIC_KEY_PERSONAL}}" \
+            -var="postgres_administrator_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -var="cosmos_administrator_username=${{ vars.COSMOS_USERNAME }}" \
+            -var="cosmos_administrator_password=${{ secrets.COSMOS_PASSWORD }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="key_vault_admin_object_id=${{ vars.KV_ADMIN_OBJECT_ID }}" \
+            -var="public_key_openssh=${{ secrets.PUBLIC_KEY_PERSONAL }}" \
             -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
@@ -164,38 +163,29 @@ jobs:
               body: output,
             });
 
-  # manual-approval:
-  #   name: Manual Approval
-  #   runs-on: ubuntu-latest
-  #   needs: terraform-plan
-  #   if: |
-  #     success() && github.event_name == 'push'
-  #     && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-  #     && github.ref == 'refs/heads/main'
-
-  #   permissions:
-  #     issues: write
-
-  #   steps:
-  #     - name: Await Manual Approval
-  #       uses: trstringer/manual-approval@v1
-  #       with:
-  #         secret: ${{ github.TOKEN }}
-  #         approvers: SudheerKumarP0357
-  #         minimum-approvals: 1
-  #         issue-title: "Manual Approval Required for Terraform Apply"
-  #         issue-body: "Please approve or deny the deployment."
-  #         fail-on-denial: true
+  manual-approval:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
+    permissions:
+      issues: write
+    steps:
+      - name: Await Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: SudheerKumarP0357
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required for Terraform Apply"
+          issue-body: "Please approve or deny the deployment."
+          fail-on-denial: true
 
   terraform-apply:
     name: Terraform Apply
-    # needs: [manual-approval, terraform-plan] # Temporary
-    needs: [terraform-plan]
-    if: |
-      success() 
-      && github.event_name == 'push' 
-      && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' 
-      && github.ref == 'refs/heads/main'
+    needs: [manual-approval, terraform-plan]
+    # needs: [terraform-plan]
+    if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
 
     runs-on: ubuntu-latest
     defaults:
@@ -204,11 +194,6 @@ jobs:
 
     outputs:
       resource_group_name: ${{ steps.terraform_outputs.outputs.resource_group_name }}
-      storage_account_name: ${{ steps.terraform_outputs.outputs.storage_account_name }}
-      key_vault_name: ${{ steps.terraform_outputs.outputs.key_vault_name }}
-      postgres_server_name: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
-      cosmos_cluster_connection_string: ${{ steps.terraform_outputs.outputs.cosmos_cluster_connection_string }}
-      redis_hostname: ${{ steps.terraform_outputs.outputs.redis_hostname }}
       aks_cluster_name: ${{ steps.terraform_outputs.outputs.aks_cluster_name }}
       alb_client_id: ${{ steps.terraform_outputs.outputs.alb_client_id }}
       alb_subnet_id: ${{ steps.terraform_outputs.outputs.alb_subnet_id }}
@@ -244,23 +229,12 @@ jobs:
           echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
           echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
           echo "key_vault_name=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
-          echo "cosmos_cluster_connection_string=$(terraform output -raw cosmos_cluster_connection_string)" >> $GITHUB_OUTPUT
-          echo "redis_hostname=$(terraform output -raw redis_hostname)" >> $GITHUB_OUTPUT
+          echo "redis_name=$(terraform output -raw redis_name)" >> $GITHUB_OUTPUT
+          echo "postgres_server_name=$(terraform output -raw postgres_server_name)" >> $GITHUB_OUTPUT
+          echo "mongo_cluser_name=$(terraform output -raw mongo_cluser_name)" >> $GITHUB_OUTPUT
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
-          echo "postgres_server_name=$(terraform output -raw postgres_server_name)" >> $GITHUB_OUTPUT
-
-  provision-secrets:
-    name: Provision KeyVault Secrets
-    defaults:
-      run:
-        working-directory: ./infra/secrets
-
-    runs-on: ubuntu-latest
-    needs: [terraform-apply]
-    steps:
-      - uses: actions/checkout@v6
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -269,75 +243,24 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      # - name: Download Terraform Output
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: key-vault-secrets
-      #     path: infra/secrets
-
-      - name: Get Runner IP
-        id: runner_ip
-        run: echo "ip=$(curl -s ifconfig.me/ip)" >> $GITHUB_OUTPUT
-
-      - name: Temporarily Open Keyvault to public
-        id: open_kv
-        run: |
-          az keyvault update --name ${{ needs.terraform-apply.outputs.key_vault_name }} --public-network-access Enabled
-          az keyvault network-rule add \
-            --name ${{ needs.terraform-apply.outputs.key_vault_name }} \
-            --ip-address ${{ steps.runner_ip.outputs.ip }} \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
-
-      - name: Terraform Format
-        id: fmt
-        run: terraform fmt -check
-
-      - name: Terraform Init
-        id: init
-        run: |
-          terraform init \
-            -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
-            -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
-            -backend-config="container_name=${{ secrets.BACKEND_STORAGE_CONTAINER_NAME }}" \
-            -backend-config="key=${{ secrets.KV_BACKEND_KEY }}"
-
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        id: plan
-        run: |
-          terraform plan \
-          -var "resource_group_name=${{ needs.terraform-apply.outputs.resource_group_name }}"
-          -var "key_vault_name=${{ needs.terraform-apply.outputs.key_vault_name }}"
-          -var "storage_account_name=${{ needs.terraform-apply.outputs.storage_account_name }}"
-          -var "postgres_server_name=${{ needs.terraform-apply.outputs.postgres_server_name }}"
-          -var "postgres_user=${{ vars.POSTGRES_USERNAME }}"
-          -var "postgres_password=${{ secrets.POSTGRES_PASSWORD }}"
-          -var "postgres_database=${{ vars.POSTGRES_DATABASE }}"
-          -var "cosmos_cluster_connection_string=${{ needs.terraform-apply.outputs.cosmos_cluster_connection_string }}"
-          -var "redis_hostname=${{ needs.terraform-apply.outputs.redis_hostname }}"
-          -var "jwt_secret=${{ secrets.JWT_SECRET }}"
-          -var "rabbitmq_default_pass=${{ secrets.RABBITMQ_PASSWORD }}"
-          -var "rabbitmq_default_user=${{ vars.RABBITMQ_USER }}"
-          -out=secrets.tfplan
-
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply -auto-approve secrets.tfplan
-
-      - name: Close Keyvault to public
-        if: always()
-        run: |
-          az keyvault update --name ${{ needs.terraform-apply.outputs.key_vault_name }} --public-network-access Disabled
-          az keyvault network-rule remove \
-            --name ${{ needs.terraform-apply.outputs.key_vault_name }} \
-            --ip-address ${{ steps.runner_ip.outputs.ip }} \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }}
+      - name: Upload Secrets to KeyVault
+        id: upload-secrets
+        run: bash scripts/push-secrets.sh
+        env:
+          RESOURCE_GROUP_NAME: ${{ steps.terraform_outputs.outputs.resource_group_name }}
+          AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.terraform_outputs.outputs.storage_account_name }}
+          AZ_KEYVAULT_NAME: ${{ steps.terraform_outputs.outputs.key_vault_name }}
+          REDIS_NAME: ${{ steps.terraform_outputs.outputs.redis_name }}
+          POSTGRES_HOST: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USERNAME }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DATABASE }}
+          COSMOS_USERNAME: ${{ vars.COSMOS_USERNAME }}
+          COSMOS_PASSWORD: ${{ secrets.COSMOS_PASSWORD }}
+          COSMOS_CLUSTER_NAME: ${{ steps.terraform_outputs.outputs.mongo_cluser_name }}
+          RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_DEFAULT_USER: ${{ vars.RABBITMQ_USER }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
   setup-alb-controller:
     name: Install ALB Controller
@@ -501,7 +424,7 @@ jobs:
           helm repo update
 
           # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n argocd --filter "^argo-cd$" -o json | jq -r '.[0].chart')
+          CURRENT_VERSION=$(helm list -n argocd --filter "argocd" -o json | jq -r '.[0].chart')
 
           if [[ "$CURRENT_VERSION" == "argo-cd-9.5.11" ]]; then  
             echo "Versions match. Skipping upgrade to prevent revision bloat."
@@ -517,12 +440,11 @@ jobs:
 
       - name: Wait for the ArgoCD resources Ready
         run: |
-          kubectl wait pod \
-            --selector app.kubernetes.io/instance=argocd \
-            --selector app.kubernetes.io/part-of=argocd \
-            -n argocd \
-            --for=condition=Ready \
-            --timeout=600s
+          kubectl wait deployment \
+          --all \
+          -n argocd \
+          --for=condition=Available \
+          --timeout=600s
 
       - name: Verify ArgoCD pods
         run: kubectl get pods -n argocd
