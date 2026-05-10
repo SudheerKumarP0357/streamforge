@@ -238,6 +238,11 @@ jobs:
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
           echo "Alb Subnet ID: $(terraform output -raw alb_subnet_id)"
 
+      - name: Verify GITHUB_OUTPUT file
+        run: |
+          cat $GITHUB_OUTPUT
+          grep "alb_subnet_id" $GITHUB_OUTPUT
+
       # - name: Login to Azure
       #   uses: azure/login@v2
       #   with:
