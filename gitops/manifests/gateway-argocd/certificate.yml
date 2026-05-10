@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: cert-manager
 spec:
-  secretName: streamforge-tls-secret
+  secretName: argocd-tls-secret
   privateKey:
     algorithm: RSA
     size: 2048

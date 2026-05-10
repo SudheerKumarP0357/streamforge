@@ -31,7 +31,7 @@ spec:
       - RespectIgnoreDifferences=true
       - ApplyOutOfSyncOnly=true
       - SkipDryRunOnMissingResource=true
+    managedNamespaceMetadata:
+      labels:
+        shared-gateway-access: "true"
   revisionHistoryLimit: 10
-  managedNamespaceMetadata:
-    labels:
-      shared-gateway-access: "true"
