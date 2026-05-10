@@ -205,8 +205,8 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
-        env:
-          TERRAFORM_WRAPPER: false
+        with:
+          terraform_wrapper: false
 
       - name: Terraform Init
         run: |
