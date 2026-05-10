@@ -236,7 +236,7 @@ jobs:
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
-          terraform output alb_subnet_id
+          echo "Alb Subnet ID: $(terraform output -raw alb_subnet_id)
 
       # - name: Login to Azure
       #   uses: azure/login@v2
@@ -264,191 +264,202 @@ jobs:
       #     RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD }}
       #     RABBITMQ_DEFAULT_USER: ${{ vars.RABBITMQ_USER }}
       #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
-
   setup-alb-controller:
     name: Install ALB Controller
     needs: [terraform-apply]
     runs-on: ubuntu-latest
     steps:
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.ARM_CLIENT_ID }}
-          tenant-id: ${{ secrets.ARM_TENANT_ID }}
-          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-
-      - name: Get AKS Cluster Credentials
+      - name: Debug
         run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+          echo '${{ toJSON(needs.terraform-apply.outputs) }}'
 
-      - name: Install alb-controller using Helm
-        run: |
-          # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
+  # setup-alb-controller:
+  #   name: Install ALB Controller
+  #   needs: [terraform-apply]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Debug
+  #       run: cat $GITHUB_OUTPUT
 
-          if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then  
-            echo "Versions match. Skipping upgrade to prevent revision bloat."
-          else
-            echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
-            --namespace azure-alb-system \
-            --create-namespace \
-            --version 1.9.13 \
-            --set albController.namespace=azure-alb-system \
-            --set albController.podIdentity.clientID=${{ needs.terraform-apply.outputs.alb_client_id }}
-          fi
+  #     - name: Login to Azure
+  #       uses: azure/login@v2
+  #       with:
+  #         client-id: ${{ secrets.ARM_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.ARM_TENANT_ID }}
+  #         subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Wait for alb-controller Pods Ready
-        run: |
-          kubectl wait pod \
-            --selector app=alb-controller \
-            -n azure-alb-system \
-            --for=condition=Ready \
-            --timeout=600s
+  #     - name: Get AKS Cluster Credentials
+  #       run: |
+  #         az aks get-credentials \
+  #           --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+  #           --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+  #           --overwrite-existing && \
+  #         kubectl cluster-info
 
-      - name: Verify alb-controller is running
-        run: kubectl get pods -n azure-alb-system
+  #     - name: Install alb-controller using Helm
+  #       run: |
+  #         # Get the currently deployed chart version
+  #         CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
 
-      - name: Wait for GatewayClass to be accepted
-        run: |
-          kubectl wait gatewayclass \
-            azure-alb-external \
-            --for=condition=Accepted \
-            --timeout=600s
+  #         if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
+  #           echo "Versions match. Skipping upgrade to prevent revision bloat."
+  #         else
+  #           echo "New version detected. Proceeding with upgrade..."
+  #           helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+  #           --namespace azure-alb-system \
+  #           --create-namespace \
+  #           --version 1.9.13 \
+  #           --set albController.namespace=azure-alb-system \
+  #           --set albController.podIdentity.clientID=${{ needs.terraform-apply.outputs.alb_client_id }}
+  #         fi
 
-      - name: Verify GatewayClass azure-alb-external is installed
-        run: kubectl get gatewayclass azure-alb-external -o yaml
+  #     - name: Wait for alb-controller Pods Ready
+  #       run: |
+  #         kubectl wait pod \
+  #           --selector app=alb-controller \
+  #           -n azure-alb-system \
+  #           --for=condition=Ready \
+  #           --timeout=600s
 
-      - name: Create ApplicationLoadBalancer Kubernetes Resource
-        run: |
-          echo "alb_subnet_id: ${{ needs.terraform-apply.outputs.alb_subnet_id }}"
-          kubectl apply -f - <<EOF
-          apiVersion: alb.networking.azure.io/v1
-          kind: ApplicationLoadBalancer
-          metadata:
-            name: alb-infra
-            namespace: azure-alb-system
-          spec:
-            associations:
-            - ${{ needs.terraform-apply.outputs.alb_subnet_id }}
-          EOF
+  #     - name: Verify alb-controller is running
+  #       run: kubectl get pods -n azure-alb-system
 
-      - name: Wait for the ApplicationLoadBalancer Deployment
-        run: |
-          kubectl wait \
-          applicationloadbalancer/alb-infra \
-          -n azure-alb-system \
-          --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
-          --timeout=600s
+  #     - name: Wait for GatewayClass to be accepted
+  #       run: |
+  #         kubectl wait gatewayclass \
+  #           azure-alb-external \
+  #           --for=condition=Accepted \
+  #           --timeout=600s
 
-      - name: Verify ApplicationLoadBalancer is running
-        run: |
-          kubectl get applicationloadbalancer alb-infra \
-          -n azure-alb-system -o yaml
+  #     - name: Verify GatewayClass azure-alb-external is installed
+  #       run: kubectl get gatewayclass azure-alb-external -o yaml
 
-  setup-cert-manager:
-    name: Setup Cert Manager
-    needs: [terraform-apply]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.ARM_CLIENT_ID }}
-          tenant-id: ${{ secrets.ARM_TENANT_ID }}
-          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  #     - name: Create ApplicationLoadBalancer Kubernetes Resource
+  #       run: |
+  #         echo "alb_subnet_id: ${{ needs.terraform-apply.outputs.alb_subnet_id }}"
+  #         kubectl apply -f - <<EOF
+  #         apiVersion: alb.networking.azure.io/v1
+  #         kind: ApplicationLoadBalancer
+  #         metadata:
+  #           name: alb-infra
+  #           namespace: azure-alb-system
+  #         spec:
+  #           associations:
+  #           - ${{ needs.terraform-apply.outputs.alb_subnet_id }}
+  #         EOF
 
-      - name: Get AKS Cluster Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+  #     - name: Wait for the ApplicationLoadBalancer Deployment
+  #       run: |
+  #         kubectl wait \
+  #         applicationloadbalancer/alb-infra \
+  #         -n azure-alb-system \
+  #         --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
+  #         --timeout=600s
 
-      - name: Install cert-manager using Helm
-        run: |
-          # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n cert-manager --filter "^cert-manager$" -o json | jq -r '.[0].chart')
+  #     - name: Verify ApplicationLoadBalancer is running
+  #       run: |
+  #         kubectl get applicationloadbalancer alb-infra \
+  #         -n azure-alb-system -o yaml
 
-          if [[ "$CURRENT_VERSION" == "cert-manager-v1.20.2" ]]; then  
-            echo "Versions match. Skipping upgrade to prevent revision bloat."
-          else
-            echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install \
-              cert-manager oci://quay.io/jetstack/charts/cert-manager \
-              --version v1.20.2 \
-              --namespace cert-manager \
-              --create-namespace \
-              --set crds.enabled=true
-          fi
+  # setup-cert-manager:
+  #   name: Setup Cert Manager
+  #   needs: [terraform-apply]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Login to Azure
+  #       uses: azure/login@v2
+  #       with:
+  #         client-id: ${{ secrets.ARM_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.ARM_TENANT_ID }}
+  #         subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Wait for the Cert Manager resources Ready
-        run: |
-          kubectl wait pod \
-          --selector app.kubernetes.io/version=v1.20.2  \
-          --selector helm.sh/chart=cert-manager-v1.20.2 \
-          -n cert-manager \
-          --for=condition=Ready \
-          --timeout=600s
+  #     - name: Get AKS Cluster Credentials
+  #       run: |
+  #         az aks get-credentials \
+  #           --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+  #           --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+  #           --overwrite-existing && \
+  #         kubectl cluster-info
 
-      - name: Verify Cert Manager pods
-        run: kubectl get pods -n cert-manager
+  #     - name: Install cert-manager using Helm
+  #       run: |
+  #         # Get the currently deployed chart version
+  #         CURRENT_VERSION=$(helm list -n cert-manager --filter "^cert-manager$" -o json | jq -r '.[0].chart')
 
-  setup-argocd:
-    name: Setup ArgoCD
-    needs: [terraform-apply]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.ARM_CLIENT_ID }}
-          tenant-id: ${{ secrets.ARM_TENANT_ID }}
-          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  #         if [[ "$CURRENT_VERSION" == "cert-manager-v1.20.2" ]]; then
+  #           echo "Versions match. Skipping upgrade to prevent revision bloat."
+  #         else
+  #           echo "New version detected. Proceeding with upgrade..."
+  #           helm upgrade --install \
+  #             cert-manager oci://quay.io/jetstack/charts/cert-manager \
+  #             --version v1.20.2 \
+  #             --namespace cert-manager \
+  #             --create-namespace \
+  #             --set crds.enabled=true
+  #         fi
 
-      - name: Get AKS Cluster Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+  #     - name: Wait for the Cert Manager resources Ready
+  #       run: |
+  #         kubectl wait pod \
+  #         --selector app.kubernetes.io/version=v1.20.2  \
+  #         --selector helm.sh/chart=cert-manager-v1.20.2 \
+  #         -n cert-manager \
+  #         --for=condition=Ready \
+  #         --timeout=600s
 
-      - name: Install ArgoCD using Helm
-        run: |
-          # Add the argo-cd repo 
-          helm repo add argo https://argoproj.github.io/argo-helm
+  #     - name: Verify Cert Manager pods
+  #       run: kubectl get pods -n cert-manager
 
-          # Update the argocd-helm repo
-          helm repo update
+  # setup-argocd:
+  #   name: Setup ArgoCD
+  #   needs: [terraform-apply]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Login to Azure
+  #       uses: azure/login@v2
+  #       with:
+  #         client-id: ${{ secrets.ARM_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.ARM_TENANT_ID }}
+  #         subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-          # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n argocd --filter "argocd" -o json | jq -r '.[0].chart')
+  #     - name: Get AKS Cluster Credentials
+  #       run: |
+  #         az aks get-credentials \
+  #           --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+  #           --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+  #           --overwrite-existing && \
+  #         kubectl cluster-info
 
-          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.11" ]]; then  
-            echo "Versions match. Skipping upgrade to prevent revision bloat."
-          else
-            echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install \
-              argocd argo/argo-cd \
-              --version 9.5.11 \
-              --namespace argocd \
-              --create-namespace \
-              --set crds.enabled=true
-          fi
+  #     - name: Install ArgoCD using Helm
+  #       run: |
+  #         # Add the argo-cd repo
+  #         helm repo add argo https://argoproj.github.io/argo-helm
 
-      - name: Wait for the ArgoCD resources Ready
-        run: |
-          kubectl wait deployment \
-          --all \
-          -n argocd \
-          --for=condition=Available \
-          --timeout=600s
+  #         # Update the argocd-helm repo
+  #         helm repo update
 
-      - name: Verify ArgoCD pods
-        run: kubectl get pods -n argocd
+  #         # Get the currently deployed chart version
+  #         CURRENT_VERSION=$(helm list -n argocd --filter "argocd" -o json | jq -r '.[0].chart')
+
+  #         if [[ "$CURRENT_VERSION" == "argo-cd-9.5.11" ]]; then
+  #           echo "Versions match. Skipping upgrade to prevent revision bloat."
+  #         else
+  #           echo "New version detected. Proceeding with upgrade..."
+  #           helm upgrade --install \
+  #             argocd argo/argo-cd \
+  #             --version 9.5.11 \
+  #             --namespace argocd \
+  #             --create-namespace \
+  #             --set crds.enabled=true
+  #         fi
+
+  #     - name: Wait for the ArgoCD resources Ready
+  #       run: |
+  #         kubectl wait deployment \
+  #         --all \
+  #         -n argocd \
+  #         --for=condition=Available \
+  #         --timeout=600s
+
+  #     - name: Verify ArgoCD pods
+  #       run: kubectl get pods -n argocd
