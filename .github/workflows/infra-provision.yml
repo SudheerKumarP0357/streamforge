@@ -236,33 +236,34 @@ jobs:
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
           echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
+          terraform output alb_subnet_id
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.ARM_CLIENT_ID }}
-          tenant-id: ${{ secrets.ARM_TENANT_ID }}
-          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      # - name: Login to Azure
+      #   uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ secrets.ARM_CLIENT_ID }}
+      #     tenant-id: ${{ secrets.ARM_TENANT_ID }}
+      #     subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Upload Secrets to KeyVault
-        id: upload-secrets
-        run: pwd && bash scripts/push-secrets.sh
-        working-directory: ${{ github.workspace }}
-        env:
-          RESOURCE_GROUP_NAME: ${{ steps.terraform_outputs.outputs.resource_group_name }}
-          AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.terraform_outputs.outputs.storage_account_name }}
-          AZ_KEYVAULT_NAME: ${{ steps.terraform_outputs.outputs.key_vault_name }}
-          REDIS_NAME: ${{ steps.terraform_outputs.outputs.redis_name }}
-          POSTGRES_HOST: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ vars.POSTGRES_USERNAME }}
-          POSTGRES_DB: ${{ vars.POSTGRES_DATABASE }}
-          COSMOS_USERNAME: ${{ vars.COSMOS_USERNAME }}
-          COSMOS_PASSWORD: ${{ secrets.COSMOS_PASSWORD }}
-          COSMOS_CLUSTER_NAME: ${{ steps.terraform_outputs.outputs.mongo_cluser_name }}
-          RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD }}
-          RABBITMQ_DEFAULT_USER: ${{ vars.RABBITMQ_USER }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      # - name: Upload Secrets to KeyVault
+      #   id: upload-secrets
+      #   run: pwd && bash scripts/push-secrets.sh
+      #   working-directory: ${{ github.workspace }}
+      #   env:
+      #     RESOURCE_GROUP_NAME: ${{ steps.terraform_outputs.outputs.resource_group_name }}
+      #     AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.terraform_outputs.outputs.storage_account_name }}
+      #     AZ_KEYVAULT_NAME: ${{ steps.terraform_outputs.outputs.key_vault_name }}
+      #     REDIS_NAME: ${{ steps.terraform_outputs.outputs.redis_name }}
+      #     POSTGRES_HOST: ${{ steps.terraform_outputs.outputs.postgres_server_name }}
+      #     POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      #     POSTGRES_USER: ${{ vars.POSTGRES_USERNAME }}
+      #     POSTGRES_DB: ${{ vars.POSTGRES_DATABASE }}
+      #     COSMOS_USERNAME: ${{ vars.COSMOS_USERNAME }}
+      #     COSMOS_PASSWORD: ${{ secrets.COSMOS_PASSWORD }}
+      #     COSMOS_CLUSTER_NAME: ${{ steps.terraform_outputs.outputs.mongo_cluser_name }}
+      #     RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD }}
+      #     RABBITMQ_DEFAULT_USER: ${{ vars.RABBITMQ_USER }}
+      #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
   setup-alb-controller:
     name: Install ALB Controller
@@ -324,6 +325,7 @@ jobs:
 
       - name: Create ApplicationLoadBalancer Kubernetes Resource
         run: |
+          echo "alb_subnet_id: ${{ needs.terraform-apply.outputs.alb_subnet_id }}"
           kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
           kind: ApplicationLoadBalancer
