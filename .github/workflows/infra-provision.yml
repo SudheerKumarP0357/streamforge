@@ -237,8 +237,9 @@ jobs:
           echo "mongo_cluser_name=$(terraform output -raw mongo_cluser_name)" >> $GITHUB_OUTPUT
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
-          echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
+          echo "alb_subnet_id='$(terraform output -raw alb_subnet_id)'" >> $GITHUB_OUTPUT
           echo "Alb Subnet ID: $(terraform output -raw alb_subnet_id)"
+          echo $GITHUB_OUTPUT
 
       # - name: Login to Azure
       #   uses: azure/login@v2
