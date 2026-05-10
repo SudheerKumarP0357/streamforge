@@ -237,7 +237,8 @@ jobs:
           echo "mongo_cluser_name=$(terraform output -raw mongo_cluser_name)" >> $GITHUB_OUTPUT
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
-          echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
+          # echo "alb_subnet_id=$(terraform output -raw alb_subnet_id)" >> $GITHUB_OUTPUT
+          echo "alb_subnet_id=$(terraform output -raw alb_subnet_id | base64 -w 0)" >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
 
       # - name: Login to Azure
@@ -274,6 +275,7 @@ jobs:
       - name: Debug
         run: |
           echo '${{ toJSON(needs.terraform-apply.outputs) }}'
+          ALB_SUBNET_ID=$(echo "${{ needs.terraform-apply.outputs.alb_subnet_id }}" | base64 -d)
 
   # setup-alb-controller:
   #   name: Install ALB Controller
