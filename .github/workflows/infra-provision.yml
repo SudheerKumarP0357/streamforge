@@ -247,7 +247,7 @@ jobs:
       - name: Upload Secrets to KeyVault
         id: upload-secrets
         run: pwd && bash scripts/push-secrets.sh
-        working-directory: ${{ GITHUB_WORKSPACE }}
+        working-directory: ${{ github.workspace }}
         env:
           RESOURCE_GROUP_NAME: ${{ steps.terraform_outputs.outputs.resource_group_name }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.terraform_outputs.outputs.storage_account_name }}
