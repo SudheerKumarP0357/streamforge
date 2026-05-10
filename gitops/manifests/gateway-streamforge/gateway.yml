@@ -18,10 +18,7 @@ spec:
       hostname: "*.sudheer.fun"
       allowedRoutes:
         namespaces:
-          from: Selector
-          selector:
-          matchLabels:
-            shared-gateway-access: "true"
+          from: Same
       tls:
         mode: Terminate
         certificateRefs:

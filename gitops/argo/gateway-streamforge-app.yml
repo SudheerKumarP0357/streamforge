@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: sf-gateway-stramforge
+  name: sf-gateway-streamforge
   namespace: argocd
   labels:
     name: gateway
