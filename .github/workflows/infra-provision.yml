@@ -164,28 +164,28 @@ jobs:
               body: output,
             });
 
-  manual-approval:
-    name: Manual Approval
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
-    permissions:
-      issues: write
-    steps:
-      - name: Await Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: SudheerKumarP0357
-          minimum-approvals: 1
-          issue-title: "Manual Approval Required for Terraform Apply"
-          issue-body: "Please approve or deny the deployment."
-          fail-on-denial: true
+  # manual-approval:
+  #   name: Manual Approval
+  #   runs-on: ubuntu-latest
+  #   needs: terraform-plan
+  #   if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
+  #   permissions:
+  #     issues: write
+  #   steps:
+  #     - name: Await Manual Approval
+  #       uses: trstringer/manual-approval@v1
+  #       with:
+  #         secret: ${{ github.TOKEN }}
+  #         approvers: SudheerKumarP0357
+  #         minimum-approvals: 1
+  #         issue-title: "Manual Approval Required for Terraform Apply"
+  #         issue-body: "Please approve or deny the deployment."
+  #         fail-on-denial: true
 
   terraform-apply:
     name: Terraform Apply
-    needs: [manual-approval, terraform-plan]
-    # needs: [terraform-plan]
+    # needs: [manual-approval, terraform-plan]
+    needs: [terraform-plan]
     if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
 
     runs-on: ubuntu-latest
@@ -246,7 +246,8 @@ jobs:
 
       - name: Upload Secrets to KeyVault
         id: upload-secrets
-        run: bash scripts/push-secrets.sh
+        run: pwd && bash scripts/push-secrets.sh
+        working-directory: ${{ GITHUB_WORKSPACE }}
         env:
           RESOURCE_GROUP_NAME: ${{ steps.terraform_outputs.outputs.resource_group_name }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.terraform_outputs.outputs.storage_account_name }}
