@@ -284,14 +284,6 @@ jobs:
             --overwrite-existing && \
           kubectl cluster-info
 
-      - name: Get ALB_CLIENT_ID
-        run: |
-          export ALB_CLIENT_ID=$(az identity show \
-              --name azure-alb-identity \
-              --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-              --query clientId -o tsv) && \
-          echo "$ALB_CLIENT_ID"
-
       - name: Create azure-alb-system Namespace
         run: |
           kubectl create namespace azure-alb-system --dry-run=client -o yaml | kubectl apply -f - && \
@@ -306,6 +298,10 @@ jobs:
           #   echo "Versions match. Skipping upgrade to prevent revision bloat."
           # else
             echo "New version detected. Proceeding with upgrade..."
+            export ALB_CLIENT_ID=$(az identity show \
+              --name azure-alb-identity \
+              --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+              --query clientId -o tsv)
             echo "ALB_CLIENT_ID: ${ALB_CLIENT_ID}"
             helm upgrade --install alb-controller \
               oci://mcr.microsoft.com/application-lb/charts/alb-controller \
@@ -338,17 +334,13 @@ jobs:
       - name: Verify GatewayClass azure-alb-external is installed
         run: kubectl get gatewayclass azure-alb-external -o yaml
 
-      - name: Get ALB Subnet ID
+      - name: Create ApplicationLoadBalancer Kubernetes Resource
         run: |
-          export ALB_SUBNET_ID=$(az network vnet subnet show \
+          ALB_SUBNET_ID=$(az network vnet subnet show \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
             --vnet-name ${{ needs.terraform-apply.outputs.app_vnet_name }} \
             --name snet-alb \
-            --query id -o tsv) && \
-          echo "$ALB_SUBNET_ID"
-
-      - name: Create ApplicationLoadBalancer Kubernetes Resource
-        run: |
+            --query id -o tsv)
           echo "ALB_SUBNET_ID: ${ALB_SUBNET_ID}"
           kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
