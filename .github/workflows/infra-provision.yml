@@ -289,7 +289,7 @@ jobs:
 
       - name: Get ALB_CLIENT_ID
         run: |
-          ALB_CLIENT_ID=$(az identity show \
+          export ALB_CLIENT_ID=$(az identity show \
               --name azure-alb-identity \
               --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
               --query clientId -o tsv)
@@ -308,6 +308,7 @@ jobs:
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
+            echo "ALB_CLIENT_ID: ${ALB_CLIENT_ID}"
             helm upgrade --install alb-controller \
               oci://mcr.microsoft.com/application-lb/charts/alb-controller \
               --namespace azure-alb-system \
@@ -341,7 +342,7 @@ jobs:
 
       - name: Get ALB Subnet ID
         run: |
-          ALB_SUBNET_ID=$(az network vnet subnet show \
+          export ALB_SUBNET_ID=$(az network vnet subnet show \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
             --vnet-name ${{ needs.terraform-apply.outputs.app_vnet_name }} \
             --name snet-alb \
@@ -349,6 +350,7 @@ jobs:
 
       - name: Create ApplicationLoadBalancer Kubernetes Resource
         run: |
+          echo "ALB_SUBNET_ID: ${ALB_SUBNET_ID}"
           kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
           kind: ApplicationLoadBalancer
