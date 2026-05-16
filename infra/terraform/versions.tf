@@ -30,12 +30,12 @@ provider "azurerm" {
 
   features {
     key_vault {
-      purge_soft_delete_on_destroy          = true  # hard-delete the vault on destroy
-      purge_soft_deleted_keys_on_destroy    = true  # hard-delete keys inside it
-      purge_soft_deleted_secrets_on_destroy = true  # hard-delete secrets inside it
-      recover_soft_deleted_keys             = false # don't auto-recover keys
-      recover_soft_deleted_secrets          = false # don't auto-recover secrets
-      recover_soft_deleted_key_vaults       = false # don't auto-recover key vaults
+      purge_soft_delete_on_destroy          = true # hard-delete the vault on destroy
+      purge_soft_deleted_keys_on_destroy    = true # hard-delete keys inside it
+      purge_soft_deleted_secrets_on_destroy = true # hard-delete secrets inside it
+      recover_soft_deleted_keys             = true # don't auto-recover keys
+      recover_soft_deleted_secrets          = true # don't auto-recover secrets
+      recover_soft_deleted_key_vaults       = true # don't auto-recover key vaults
     }
 
     postgresql_flexible_server {
