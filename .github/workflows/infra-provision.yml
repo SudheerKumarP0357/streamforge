@@ -291,18 +291,18 @@ jobs:
 
       - name: Install alb-controller using Helm
         run: |
-          # # Get the currently deployed chart version
-          # CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
 
-          # if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
-          #   echo "Versions match. Skipping upgrade to prevent revision bloat."
-          # else
+          if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
             echo "New version detected. Proceeding with upgrade..."
-            export ALB_CLIENT_ID=$(az identity show \
+            ALB_CLIENT_ID=$(az identity show \
               --name azure-alb-identity \
               --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
               --query clientId -o tsv)
-            echo "ALB_CLIENT_ID: ${ALB_CLIENT_ID}"
+
             helm upgrade --install alb-controller \
               oci://mcr.microsoft.com/application-lb/charts/alb-controller \
               --namespace azure-alb-system \
@@ -311,7 +311,7 @@ jobs:
               --set albController.podIdentity.clientID=${ALB_CLIENT_ID} \
               --wait \
               --timeout 5m
-          # fi
+          fi
 
       - name: Wait for alb-controller Pods Ready
         run: |
@@ -341,7 +341,7 @@ jobs:
             --vnet-name ${{ needs.terraform-apply.outputs.app_vnet_name }} \
             --name snet-alb \
             --query id -o tsv)
-          echo "ALB_SUBNET_ID: ${ALB_SUBNET_ID}"
+
           kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
           kind: ApplicationLoadBalancer
@@ -418,6 +418,16 @@ jobs:
           -n cert-manager \
           --for=condition=Ready \
           --timeout=600s
+
+      - name: CloudFlare API Secret Token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          kubectl create secret generic \
+            cloudflare-api-token-secret \
+            --namespace cert-manager \
+            --from-literal=api-token="${CLOUDFLARE_API_TOKEN}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Verify Cert Manager pods
         run: kubectl get pods -n cert-manager
