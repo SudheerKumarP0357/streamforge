@@ -8,6 +8,7 @@ spec:
   parentRefs:
     - name: streamforge-gateway
       sectionName: https-listener
+      namespace: streamforge-prod
   hostnames:
     - "streamforge.sudheer.fun"
   rules:
@@ -18,3 +19,4 @@ spec:
       backendRefs:
         - name: sf-frontend-svc
           port: 80
+          namespace: streamforge-prod

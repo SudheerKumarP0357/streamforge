@@ -9,11 +9,12 @@ spec:
     group: ""
     kind: Service
     name: sf-frontend-svc
+    namespace: streamforge-prod
   default:
-    interval: 5s
-    timeout: 3s
-    healthyThreshold: 1
-    unhealthyThreshold: 1
+    interval: 10s
+    timeout: 5s
+    healthyThreshold: 2
+    unhealthyThreshold: 3
     port: 3000 # Port number for Containers not the Service port number
     http:
       path: /api/health

@@ -2,6 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: streamforge-gateway
+  namespace: streamforge-prod
   labels:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
@@ -25,6 +26,7 @@ spec:
           - kind: Secret
             group: ""
             name: streamforge-tls-secret
+            namespace: streamforge-prod
     - name: http-listener
       port: 80
       protocol: HTTP
