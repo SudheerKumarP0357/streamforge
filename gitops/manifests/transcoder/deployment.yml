@@ -112,9 +112,9 @@ spec:
         - name: transcoder
           image: ghcr.io/sudheerkumarp0357/streamforge/transcoder:latest
           resources:
-            limits:
-              memory: "2Gi"
-              cpu: "2"
+            # limits:
+            #   memory: "2Gi"
+            #   cpu: "2"
             requests:
               memory: "1Gi"
               cpu: "1"
