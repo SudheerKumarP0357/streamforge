@@ -20,11 +20,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: streamforge-prod
 
-    managedNamespaceMetadata:
-      labels:
-        app.kubernetes.io/part-of: streamforge-application
-        app.kubernetes.io/name: streamforge
-
   syncPolicy:
     automated:
       enabled: true
@@ -36,4 +31,8 @@ spec:
       - RespectIgnoreDifferences=true
       - ApplyOutOfSyncOnly=true
       - SkipDryRunOnMissingResource=true
+    managedNamespaceMetadata:
+      labels:
+        app.kubernetes.io/part-of: streamforge-application
+        app.kubernetes.io/name: streamforge
   revisionHistoryLimit: 10

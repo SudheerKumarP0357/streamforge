@@ -43,8 +43,8 @@ spec:
           env:
             - name: POSTGRES_HOST
               valueFrom:
-                configMapKeyRef:
-                  name: sf-configmaps
+                secretKeyRef:
+                  name: sf-secrets
                   key: POSTGRES_HOST
             - name: POSTGRES_PORT
               valueFrom:
@@ -67,8 +67,8 @@ spec:
           env:
             - name: REDIS_HOST
               valueFrom:
-                configMapKeyRef:
-                  name: sf-configmaps
+                secretKeyRef:
+                  name: sf-secrets
                   key: REDIS_HOST
             - name: REDIS_PORT
               valueFrom:
