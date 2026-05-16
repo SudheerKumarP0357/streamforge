@@ -69,7 +69,7 @@ resource "azurerm_subnet" "aks_subnet" {
 }
 
 resource "azurerm_subnet" "alb_subnet" {
-  name                            = "alb-subnet"
+  name                            = "snet-alb"
   resource_group_name             = azurerm_resource_group.main.name
   virtual_network_name            = azurerm_virtual_network.app_vnet.name
   address_prefixes                = ["10.10.20.0/24"]

@@ -12,7 +12,6 @@ spec:
       app.kubernetes.io/name: frontend
       app.kubernetes.io/part-of: streamforge-application
       app.kubernetes.io/component: frontend
-  replicas: 1
   template:
     metadata:
       labels:

@@ -2,8 +2,12 @@ apiVersion: alb.networking.azure.io/v1
 kind: HealthCheckPolicy
 metadata:
   name: argocd-health-check
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: streamforge-infra
+    app.kubernetes.io/component: gateway
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   targetRef:
     group: ""
@@ -11,13 +15,13 @@ spec:
     name: argocd-server
     namespace: argocd
   default:
-    interval: 5s
-    timeout: 3s
-    healthyThreshold: 1
-    unhealthyThreshold: 1
-    port: 8080 # Port number for Containers not the Service port number
+    interval: 10s
+    timeout: 5s
+    healthyThreshold: 2
+    unhealthyThreshold: 3
+    port: 8080
     http:
-      path: /healthz?full=true
+      path: /healthz
       match:
         statusCodes:
           - start: 200

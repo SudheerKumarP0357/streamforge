@@ -1,0 +1,15 @@
+# argocd-values.yaml
+global:
+  domain: argocd.sudheer.fun
+
+server:
+  insecure: true # TLS terminated at Gateway, not ArgoCD pod
+  service:
+    type: ClusterIP # ALB handles external exposure
+
+configs:
+  params:
+    server.insecure: true # belt and suspenders, set both
+
+crds:
+  enabled: true

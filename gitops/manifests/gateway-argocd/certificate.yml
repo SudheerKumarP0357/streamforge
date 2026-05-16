@@ -2,6 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: argocd-tls-cert
+  namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
   labels:
@@ -19,9 +20,9 @@ spec:
     - server auth
     - digital signature
     - key encipherment
-  commonName: "*.sudheer.fun"
+  commonName: "argocd.sudheer.fun"
   dnsNames:
-    - "*.sudheer.fun"
+    - "argocd.sudheer.fun"
   issuerRef:
     name: cloudflare-cluster-issuer
     kind: ClusterIssuer

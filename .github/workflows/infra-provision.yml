@@ -196,8 +196,7 @@ jobs:
     outputs:
       resource_group_name: ${{ steps.terraform_outputs.outputs.resource_group_name }}
       aks_cluster_name: ${{ steps.terraform_outputs.outputs.aks_cluster_name }}
-      alb_client_id: ${{ steps.terraform_outputs.outputs.alb_client_id }}
-      alb_subnet_id: ${{ steps.terraform_outputs.outputs.alb_subnet_id }}
+      app_vnet_name: ${{ steps.terraform_outputs.outputs.app_vnet_name }}
 
     steps:
       - name: Checkout
@@ -236,8 +235,7 @@ jobs:
           echo "postgres_server_name=$(terraform output -raw postgres_server_name)" >> $GITHUB_OUTPUT
           echo "mongo_cluser_name=$(terraform output -raw mongo_cluser_name)" >> $GITHUB_OUTPUT
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
-          echo "alb_client_id=$(terraform output -raw azure_alb_identity)" >> $GITHUB_OUTPUT
-          echo "alb_subnet_id=$(terraform output -raw alb_subnet_id | base64 | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "app_vnet_name=$(terraform output -raw app_vnet_name)" >> $GITHUB_OUTPUT
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -289,6 +287,18 @@ jobs:
             --overwrite-existing && \
           kubectl cluster-info
 
+      - name: Get ALB_CLIENT_ID
+        run: |
+          ALB_CLIENT_ID=$(az identity show \
+              --name azure-alb-identity \
+              --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+              --query clientId -o tsv)
+
+      - name: Create azure-alb-system Namespace
+        run: |
+          kubectl create namespace azure-alb-system --dry-run=client -o yaml | kubectl apply -f - && \
+          kubectl wait --for='jsonpath={.status.phase}=Active' ns/azure-alb-system --timeout 60s
+
       - name: Install alb-controller using Helm
         run: |
           # Get the currently deployed chart version
@@ -298,12 +308,14 @@ jobs:
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install alb-controller oci://mcr.microsoft.com/application-lb/charts/alb-controller \
-            --namespace azure-alb-system \
-            --create-namespace \
-            --version 1.9.13 \
-            --set albController.namespace=azure-alb-system \
-            --set albController.podIdentity.clientID=${{ needs.terraform-apply.outputs.alb_client_id }}
+            helm upgrade --install alb-controller \
+              oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+              --namespace azure-alb-system \
+              --version 1.9.13 \
+              --set albController.namespace=azure-alb-system \
+              --set albController.podIdentity.clientID=${ALB_CLIENT_ID} \
+              --wait \
+              --timeout 5m
           fi
 
       - name: Wait for alb-controller Pods Ready
@@ -327,9 +339,16 @@ jobs:
       - name: Verify GatewayClass azure-alb-external is installed
         run: kubectl get gatewayclass azure-alb-external -o yaml
 
+      - name: Get ALB Subnet ID
+        run: |
+          ALB_SUBNET_ID=$(az network vnet subnet show \
+            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --vnet-name ${{ needs.terraform-apply.outputs.app_vnet_name }} \
+            --name snet-alb \
+            --query id -o tsv)$
+
       - name: Create ApplicationLoadBalancer Kubernetes Resource
         run: |
-          ALB_SUBNET_ID=$(echo -n "${{ needs.terraform-apply.outputs.alb_subnet_id }}" | base64 -d | base64 -d)
           kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
           kind: ApplicationLoadBalancer
@@ -356,7 +375,7 @@ jobs:
 
   setup-cert-manager:
     name: Setup Cert Manager
-    needs: [terraform-apply]
+    needs: [terraform-apply, setup-alb-controller]
     runs-on: ubuntu-latest
     steps:
       - name: Login to Azure
@@ -374,6 +393,11 @@ jobs:
             --overwrite-existing && \
           kubectl cluster-info
 
+      - name: Create cert-manager Namespace
+        run: |
+          kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f - && \
+          kubectl wait --for='jsonpath={.status.phase}=Active' ns/cert-manager --timeout 60s
+
       - name: Install cert-manager using Helm
         run: |
           # Get the currently deployed chart version
@@ -383,12 +407,14 @@ jobs:
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install \
-              cert-manager oci://quay.io/jetstack/charts/cert-manager \
+            helm upgrade --install cert-manager \
+              oci://quay.io/jetstack/charts/cert-manager \
               --version v1.20.2 \
               --namespace cert-manager \
-              --create-namespace \
-              --set crds.enabled=true
+              --set config.enableGatewayAPI=true \
+              --set crds.enabled=true \
+              --wait \
+              --timeout 5m
           fi
 
       - name: Wait for the Cert Manager resources Ready
@@ -423,27 +449,31 @@ jobs:
             --overwrite-existing && \
           kubectl cluster-info
 
+      - name: Create argocd Namespace
+        run: |
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+          kubectl wait --for='jsonpath={.status.phase}=Active' ns/argocd --timeout 60s
+
       - name: Install ArgoCD using Helm
         run: |
-          # Add the argo-cd repo
-          helm repo add argo https://argoproj.github.io/argo-helm
-
-          # Update the argocd-helm repo
-          helm repo update
-
           # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n argocd --filter "argocd" -o json | jq -r '.[0].chart')
+          CURRENT_VERSION=$(helm list -n argocd --filter "argocd$" -o json | jq -r '.[0].chart')
 
-          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.11" ]]; then
+          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.14" ]]; then
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install \
-              argocd argo/argo-cd \
+            helm upgrade --install argocd \
+              oci://ghcr.io/argoproj/argo-helm/argo-cd \
               --version 9.5.11 \
               --namespace argocd \
-              --create-namespace \
-              --set crds.enabled=true
+              --set global.domain=argocd.sudheer.fun \
+              --set server.insecure=true \
+              --set server.service.type=ClusterIP \
+              --set configs.params."server\.insecure"=true \
+              --set crds.enabled=true \
+              --wait \
+              --timeout 5m
           fi
 
       - name: Wait for the ArgoCD resources Ready

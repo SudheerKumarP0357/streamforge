@@ -34,5 +34,7 @@ COPY --from=build /app/build/static/ /app/build/static/
 
 EXPOSE 3000
 
+USER nextjs
+
 ENTRYPOINT [ "node" ]
 CMD [ "/app/server.js" ]

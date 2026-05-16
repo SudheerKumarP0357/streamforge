@@ -4,8 +4,6 @@ ARG GO_VERSION=1.24.0
 FROM golang:${GO_VERSION} AS build
 WORKDIR /src
 
-COPY . .
-
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \

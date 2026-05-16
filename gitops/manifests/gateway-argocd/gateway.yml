@@ -2,6 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: argocd-gateway
+  namespace: argocd
   labels:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
@@ -15,7 +16,7 @@ spec:
     - name: https-listener
       port: 443
       protocol: HTTPS
-      hostname: "*.sudheer.fun"
+      hostname: "argocd.sudheer.fun"
       allowedRoutes:
         namespaces:
           from: Same
@@ -25,10 +26,11 @@ spec:
           - kind: Secret
             group: ""
             name: argocd-tls-secret
+            namespace: argocd
     - name: http-listener
       port: 80
       protocol: HTTP
-      hostname: "*.sudheer.fun"
+      hostname: "argocd.sudheer.fun"
       allowedRoutes:
         namespaces:
           from: Same
