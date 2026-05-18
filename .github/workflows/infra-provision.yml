@@ -1,17 +1,14 @@
-name: Infra Provision - Azure
+name: Azure Infra & AKS Setup
 on:
   workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - infra/terraform/**
+      - terraform/**
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - scripts/*
-      - k8s/*
 
 env:
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}

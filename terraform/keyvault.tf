@@ -1,5 +1,3 @@
-
-
 resource "azurerm_key_vault" "main" {
   name                        = "kv-${var.application_name}${var.environment_name}${var.primary_location_short_name}"
   location                    = azurerm_resource_group.main.location
@@ -18,17 +16,23 @@ resource "azurerm_key_vault" "main" {
   tags = var.tags
 }
 
-resource "azurerm_role_assignment" "key_vault_admin" {
+
+module "key_vault_admin_terraform" {
+  source               = "./modules/role_assignments"
+  principal_id         = data.azurerm_client_config.current.object_id
   scope                = azurerm_key_vault.main.id
-  principal_id         = var.key_vault_admin_object_id
+  principal_type       = "ServicePrincipal"
   role_definition_name = "Key Vault Administrator"
 }
 
-resource "azurerm_role_assignment" "key_vault_admin_terraform" {
+module "key_vault_admin" {
+  source               = "./modules/role_assignments"
+  principal_id         = var.key_vault_admin_object_id
   scope                = azurerm_key_vault.main.id
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_type       = "ServicePrincipal"
   role_definition_name = "Key Vault Administrator"
 }
+
 
 module "keyvault" {
   source                = "./modules/private-endpoint"

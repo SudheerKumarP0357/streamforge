@@ -31,7 +31,7 @@ variable "tags" {
   })
 
   default = ({
-    Environment = "dev"
+    Environment = "Prod"
     Owner       = "Sudheer"
     Created_By  = "Terraform"
     Application = "Streamforge"
