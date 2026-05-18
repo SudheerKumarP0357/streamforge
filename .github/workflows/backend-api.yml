@@ -108,6 +108,37 @@ jobs:
         with:
           driver: docker-container
 
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        id: push
+        with:
+          context: ${{ env.CONTEXT_PATH }}
+          file: ${{ env.CONTEXT_PATH }}/${{ env.DOCKERFILE_NAME }}
+          load: true
+          tags: |
+            streamforge-api:scan
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          provenance: false
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: streamforge-api:scan
+          format: sarif
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          output: trivy-api-results.sarif
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: "trivy-api-results.sarif"
+
       - name: Build and push Docker images
         uses: docker/build-push-action@v7
         id: push
@@ -121,6 +152,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: mode=max
+          platforms: linux/amd64,linux/arm64
 
   update-image-tag:
     name: Update image tag in kustomize
@@ -137,7 +169,8 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Update image tag in kustomize
-        run: bash ./scripts/update-image-tag.sh -s ${{ env.ARTIFACT_NAME }} -t "sha-${{
+        run:
+          bash ./scripts/update-image-tag.sh -s ${{ env.ARTIFACT_NAME }} -t "sha-${{
           github.sha }}"
 
       - name: Create Pull Request
