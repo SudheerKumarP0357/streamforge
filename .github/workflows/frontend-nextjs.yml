@@ -120,6 +120,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64
           provenance: mode=max
 
       - name: Image Scan with Trivy
@@ -150,6 +151,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: mode=max
+          platforms: linux/amd64,linux/arm64
 
   # update-image-tag:
   #   name: Update image tag in kustomize
