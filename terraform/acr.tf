@@ -1,5 +1,5 @@
 # resource "azurerm_container_registry" "acr" {
-#   name                = "acr${var.application_name}${var.environment_name}${var.primary_location_short_name}"
+#   name                = "acr${local.name}"
 #   resource_group_name = azurerm_resource_group.main.name
 #   location            = azurerm_resource_group.main.location
 #   sku                 = var.acr_sku
@@ -28,8 +28,3 @@
 #   jump_vnet_id          = azurerm_virtual_network.jump_vnet.id
 #   app_vnet_id           = azurerm_virtual_network.app_vnet.id
 # }
-
-
-#################################################################################
-# TEMPORARY COMMENTED ACR SINCE WE ARE GOING TO USE THE GITHUB CONTAINER REGISTRY
-##################################################################################

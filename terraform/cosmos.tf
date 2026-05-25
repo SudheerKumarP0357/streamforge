@@ -1,5 +1,5 @@
 resource "azurerm_mongo_cluster" "main" {
-  name                = "cosmon-${var.application_name}-${var.environment_name}"
+  name                = "cosmon-${local.name}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
 

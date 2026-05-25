@@ -13,8 +13,7 @@ postgres_server_version = 17
 postgres_storage_in_mb  = 32768
 postgres_storage_tier   = "P4"
 postgres_sku            = "B_Standard_B1ms"
-postgres_extensions     = "PGCRYPTO,UUID-OSSP"
-
+postgres_extensions     = ["pgcrypto", "uuid-ossp"]
 
 # Managed Redis
 redis_sku_name = "Balanced_B0"
@@ -29,3 +28,7 @@ aks_max_system_pool_node_count   = 1
 aks_min_system_pool_node_count   = 1
 aks_systempool_max_pods_per_node = 250
 kubectl_version                  = "1.35"
+
+
+# Storage Account
+allowed_origins = "https://streamforge.sudheer.fun"

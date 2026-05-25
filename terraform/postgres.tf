@@ -1,5 +1,5 @@
 resource "azurerm_postgresql_flexible_server" "main" {
-  name                          = "psql${var.application_name}${var.environment_name}${var.primary_location_short_name}"
+  name                          = "psql${local.name}"
   resource_group_name           = azurerm_resource_group.main.name
   location                      = azurerm_resource_group.main.location
   version                       = var.postgres_server_version
@@ -40,7 +40,7 @@ resource "azurerm_postgresql_flexible_server_database" "streamforge" {
 resource "azurerm_postgresql_flexible_server_configuration" "psql_extensions" {
   name      = "azure.extensions"
   server_id = azurerm_postgresql_flexible_server.main.id
-  value     = var.postgres_extensions
+  value     = join(", ", var.postgres_extensions)
 }
 
 

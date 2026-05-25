@@ -273,23 +273,27 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Get AKS Cluster Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+      # - name: Get AKS Cluster Credentials
+      #   run: |
+      #     az aks get-credentials \
+      #       --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+      #       --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+      #       --overwrite-existing && \
+      #     kubectl cluster-info
 
       - name: Create azure-alb-system Namespace
         run: |
-          kubectl create namespace azure-alb-system --dry-run=client -o yaml | kubectl apply -f - && \
-          kubectl wait --for='jsonpath={.status.phase}=Active' ns/azure-alb-system --timeout 60s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl create namespace azure-alb-system && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/azure-alb-system --timeout 60s"
 
       - name: Install alb-controller using Helm
         run: |
           # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart')
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart'")
 
           if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
             echo "Versions match. Skipping upgrade to prevent revision bloat."
@@ -300,36 +304,45 @@ jobs:
               --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
               --query clientId -o tsv)
 
-            helm upgrade --install alb-controller \
+            az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "helm upgrade --install alb-controller \
               oci://mcr.microsoft.com/application-lb/charts/alb-controller \
               --namespace azure-alb-system \
               --version 1.9.13 \
               --set albController.namespace=azure-alb-system \
               --set albController.podIdentity.clientID=${ALB_CLIENT_ID} \
               --wait \
-              --timeout 5m
+              --timeout 5m"
           fi
 
       - name: Wait for alb-controller Pods Ready
         run: |
-          kubectl wait pod \
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl wait pod \
             --selector app=alb-controller \
             -n azure-alb-system \
             --for=condition=Ready \
-            --timeout=600s
+            --timeout=600s"
 
       - name: Verify alb-controller is running
-        run: kubectl get pods -n azure-alb-system
+        run: |
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl get pods -n azure-alb-system"
 
       - name: Wait for GatewayClass to be accepted
         run: |
-          kubectl wait gatewayclass \
-            azure-alb-external \
-            --for=condition=Accepted \
-            --timeout=600s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s"
 
       - name: Verify GatewayClass azure-alb-external is installed
-        run: kubectl get gatewayclass azure-alb-external -o yaml
+        run: |
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl get gatewayclass azure-alb-external -o yaml"
 
       - name: Create ApplicationLoadBalancer Kubernetes Resource
         run: |
@@ -339,7 +352,9 @@ jobs:
             --name snet-alb \
             --query id -o tsv)
 
-          kubectl apply -f - <<EOF
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl apply -f - <<EOF
           apiVersion: alb.networking.azure.io/v1
           kind: ApplicationLoadBalancer
           metadata:
@@ -348,20 +363,23 @@ jobs:
           spec:
             associations:
             - ${ALB_SUBNET_ID}
-          EOF
+          EOF"
 
       - name: Wait for the ApplicationLoadBalancer Deployment
         run: |
-          kubectl wait \
-          applicationloadbalancer/alb-infra \
-          -n azure-alb-system \
-          --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
-          --timeout=600s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl wait applicationloadbalancer/alb-infra \
+            -n azure-alb-system \
+            --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
+            --timeout=600s"
 
       - name: Verify ApplicationLoadBalancer is running
         run: |
-          kubectl get applicationloadbalancer alb-infra \
-          -n azure-alb-system -o yaml
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl get applicationloadbalancer alb-infra \
+            -n azure-alb-system -o yaml"
 
   setup-cert-manager:
     name: Setup Cert Manager
@@ -375,59 +393,72 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Get AKS Cluster Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+      # - name: Get AKS Cluster Credentials
+      #   run: |
+      #     az aks get-credentials \
+      #       --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+      #       --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+      #       --overwrite-existing && \
+      #     kubectl cluster-info
 
       - name: Create cert-manager Namespace
         run: |
-          kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f - && \
-          kubectl wait --for='jsonpath={.status.phase}=Active' ns/cert-manager --timeout 60s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+          --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+          --command "kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f - && \
+          kubectl wait --for='jsonpath={.status.phase}=Active' ns/cert-manager --timeout 60s"
 
       - name: Install cert-manager using Helm
         run: |
           # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n cert-manager --filter "^cert-manager$" -o json | jq -r '.[0].chart')
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+          --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+          --command "helm list -n cert-manager --filter "^cert-manager$" -o json | jq -r '.[0].chart'")
 
           if [[ "$CURRENT_VERSION" == "cert-manager-v1.20.2" ]]; then
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install cert-manager \
+            az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "helm upgrade --install cert-manager \
               oci://quay.io/jetstack/charts/cert-manager \
               --version v1.20.2 \
               --namespace cert-manager \
               --set config.enableGatewayAPI=true \
               --set crds.enabled=true \
               --wait \
-              --timeout 5m
+              --timeout 5m"
           fi
 
       - name: Wait for the Cert Manager resources Ready
         run: |
-          kubectl wait pod \
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+          --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+          --command "kubectl wait pod \
           --selector app.kubernetes.io/version=v1.20.2  \
           --selector helm.sh/chart=cert-manager-v1.20.2 \
           -n cert-manager \
           --for=condition=Ready \
-          --timeout=600s
+          --timeout=600s"
 
       - name: CloudFlare API Secret Token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          kubectl create secret generic \
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl create secret generic \
             cloudflare-api-token-secret \
             --namespace cert-manager \
-            --from-literal=api-token="${CLOUDFLARE_API_TOKEN}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --from-literal=api-token=\'${CLOUDFLARE_API_TOKEN}\' \
+            --dry-run=client -o yaml | kubectl apply -f -"
 
       - name: Verify Cert Manager pods
-        run: kubectl get pods -n cert-manager
+        run: |
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl get pods -n cert-manager"
 
   setup-argocd:
     name: Setup ArgoCD
@@ -441,29 +472,35 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Get AKS Cluster Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
-            --overwrite-existing && \
-          kubectl cluster-info
+      # - name: Get AKS Cluster Credentials
+      #   run: |
+      #     az aks get-credentials \
+      #       --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+      #       --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+      #       --overwrite-existing && \
+      #     kubectl cluster-info
 
       - name: Create argocd Namespace
         run: |
-          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
-          kubectl wait --for='jsonpath={.status.phase}=Active' ns/argocd --timeout 60s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/argocd --timeout 60s"
 
       - name: Install ArgoCD using Helm
         run: |
           # Get the currently deployed chart version
-          CURRENT_VERSION=$(helm list -n argocd --filter "argocd$" -o json | jq -r '.[0].chart')
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "helm list -n argocd --filter \'argocd$\' -o json | jq -r '.[0].chart'")
 
           if [[ "$CURRENT_VERSION" == "argo-cd-9.5.14" ]]; then
             echo "Versions match. Skipping upgrade to prevent revision bloat."
           else
             echo "New version detected. Proceeding with upgrade..."
-            helm upgrade --install argocd \
+            az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+              --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+              --command "helm upgrade --install argocd \
               oci://ghcr.io/argoproj/argo-helm/argo-cd \
               --version 9.5.14 \
               --namespace argocd \
@@ -473,16 +510,21 @@ jobs:
               --set configs.params."server\.insecure"=true \
               --set crds.enabled=true \
               --wait \
-              --timeout 5m
+              --timeout 5m"
           fi
 
       - name: Wait for the ArgoCD resources Ready
         run: |
-          kubectl wait deployment \
-          --all \
-          -n argocd \
-          --for=condition=Available \
-          --timeout=600s
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl wait deployment \
+            --all \
+            -n argocd \
+            --for=condition=Available \
+            --timeout=600s"
 
       - name: Verify ArgoCD pods
-        run: kubectl get pods -n argocd
+        run: |
+          az aks command invoke --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
+            --name ${{ needs.terraform-apply.outputs.aks_cluster_name }} \
+            --command "kubectl get pods -n argocd"

@@ -98,23 +98,3 @@ resource "azurerm_subnet" "jump_subnet" {
   address_prefixes                = ["10.9.10.0/24"]
   default_outbound_access_enabled = false
 }
-
-
-
-# ===============================================================
-# JUMP VNET & APP VNET PEERINGS
-# ===============================================================
-
-resource "azurerm_virtual_network_peering" "jump_to_app" {
-  name                      = "peer-jump-to-app"
-  resource_group_name       = azurerm_resource_group.main.name
-  virtual_network_name      = azurerm_virtual_network.jump_vnet.name
-  remote_virtual_network_id = azurerm_virtual_network.app_vnet.id
-}
-
-resource "azurerm_virtual_network_peering" "app_to_jump" {
-  name                      = "peer-app-to-jump"
-  resource_group_name       = azurerm_resource_group.main.name
-  virtual_network_name      = azurerm_virtual_network.app_vnet.name
-  remote_virtual_network_id = azurerm_virtual_network.jump_vnet.id
-}

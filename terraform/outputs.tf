@@ -26,6 +26,6 @@ output "app_vnet_name" {
   value = azurerm_virtual_network.app_vnet.name
 }
 
-output "mongo_cluser_name" {
+output "mongo_cluster_name" {
   value = azurerm_mongo_cluster.main.name
 }

@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "4.65.0"
+      version = "4.74.0"
     }
     azuread = {
       source  = "hashicorp/azuread"
@@ -22,12 +22,12 @@ provider "azurerm" {
 
   features {
     key_vault {
-      purge_soft_delete_on_destroy          = true # hard-delete the vault on destroy
-      purge_soft_deleted_keys_on_destroy    = true # hard-delete keys inside it
-      purge_soft_deleted_secrets_on_destroy = true # hard-delete secrets inside it
-      recover_soft_deleted_keys             = true # don't auto-recover keys
-      recover_soft_deleted_secrets          = true # don't auto-recover secrets
-      recover_soft_deleted_key_vaults       = true # don't auto-recover key vaults
+      purge_soft_delete_on_destroy          = false
+      purge_soft_deleted_keys_on_destroy    = false
+      purge_soft_deleted_secrets_on_destroy = false
+      recover_soft_deleted_keys             = true
+      recover_soft_deleted_secrets          = true
+      recover_soft_deleted_key_vaults       = true
     }
 
     postgresql_flexible_server {

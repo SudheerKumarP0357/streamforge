@@ -1,5 +1,5 @@
 resource "azurerm_storage_account" "main" {
-  name                     = "st${var.application_name}${var.environment_name}${var.primary_location_short_name}"
+  name                     = "st${local.name}"
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
@@ -17,9 +17,8 @@ resource "azurerm_storage_account" "main" {
 
 
   blob_properties {
-
     cors_rule {
-      allowed_origins    = ["https://streamforge.sudheer.fun"]
+      allowed_origins    = [var.allowed_origins]
       allowed_methods    = ["GET"]
       allowed_headers    = ["*"]
       exposed_headers    = ["*"]

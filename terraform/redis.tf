@@ -1,5 +1,5 @@
 resource "azurerm_managed_redis" "main" {
-  name                = "amr${var.application_name}${var.environment_name}"
+  name                = "amr${local.name}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku_name            = var.redis_sku_name
