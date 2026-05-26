@@ -1,0 +1,10 @@
+---
+- op: replace
+  path: /spec/commonName
+  value: "*.sudheer.fun"
+
+- op: replace
+  path: /spec/dnsNames
+  value:
+    - "sudheer.fun"
+    - "*.sudheer.fun"

@@ -1,0 +1,11 @@
+- op: replace
+  path: /spec/parameters/clientID
+  value: PLACEHOLDER_CLIENT_ID
+
+- op: replace
+  path: /spec/parameters/tenantID
+  value: PLACEHOLDER_TENANT_ID
+
+- op: replace
+  path: /spec/parameters/keyvaultName
+  value: PLACEHOLDER_AZURE_KEY_VAULT_NAME

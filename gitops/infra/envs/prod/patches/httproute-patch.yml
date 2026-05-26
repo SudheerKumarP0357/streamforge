@@ -1,0 +1,6 @@
+---
+- op: replace
+  path: /spec/hostnames
+  value:
+    - "sudheer.fun"
+    - "*.sudheer.fun"

@@ -1,0 +1,5 @@
+---
+- op: replace
+  path: /spec/hostnames
+  value:
+    - "streamforge.sudheer.fun"

@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base/
+
+namespace: streamforge-dev
+
+replicas:
+  - count: 2
+    name: sf-api
+  - count: 2
+    name: sf-frontend
+  - count: 1
+    name: sf-transcoder
+
+images:
+  - name: ghcr.io/sudheerkumarp0357/streamforge/api
+    newName: ghcr.io/sudheerkumarp0357/streamforge/api
+    newTag: sha-9b0149f9ac0886ca362aa4631d1b927d2e4af7ba
+  - name: ghcr.io/sudheerkumarp0357/streamforge/frontend
+    newName: ghcr.io/sudheerkumarp0357/streamforge/frontend
+    newTag: sha-9b0149f9ac0886ca362aa4631d1b927d2e4af7ba
+  - name: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+    newName: ghcr.io/sudheerkumarp0357/streamforge/transcoder
+    newTag: sha-9b0149f9ac0886ca362aa4631d1b927d2e4af7ba
+
+patches:
+  - path: patches/namespace.yml
+    target:
+      kind: Namespace
+      name: streamforge
+      version: v1
+
+  - path: patches/serviceaccount.yml
+    target:
+      kind: ServiceAccount
+      name: sf-workload-sa
+      version: v1
+
+  - path: patches/keyvault.yml
+    target:
+      kind: SecretProviderClass
+      name: azure-kv-sf
+      version: v1

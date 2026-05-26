@@ -12,8 +12,8 @@ on:
     branches:
       - "main"
     paths-ignore:
-      - k8s/*
-      - infra/* - scripts/*
+      - gitops/*
+      - scripts/*
     # Intentionally no paths filter — required status check must
     # always run and report on every PR regardless of changed files
 

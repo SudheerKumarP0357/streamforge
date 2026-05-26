@@ -1,0 +1,4 @@
+---
+- op: replace
+  path: /spec/acme/email
+  value: sudheerkumarp0357@gmail.com

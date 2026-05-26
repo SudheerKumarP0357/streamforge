@@ -1,0 +1,36 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: argocd-gateway
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: streamforge-infra
+    app.kubernetes.io/component: gateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    alb.networking.azure.io/alb-namespace: azure-alb-system
+    alb.networking.azure.io/alb-name: alb-infra
+spec:
+  gatewayClassName: azure-alb-external
+  listeners:
+    - name: https-listener
+      port: 443
+      protocol: HTTPS
+      hostname: "argocd.sudheer.fun"
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: argocd-tls-secret
+            namespace: argocd
+    - name: http-listener
+      port: 80
+      protocol: HTTP
+      hostname: "argocd.sudheer.fun"
+      allowedRoutes:
+        namespaces:
+          from: Same
