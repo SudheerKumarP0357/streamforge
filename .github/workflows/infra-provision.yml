@@ -28,7 +28,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && ( github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' )
     defaults:
       run:
-        working-directory: ./infra/terraform
+        working-directory: ./terraform
 
     runs-on: ubuntu-latest
     steps:
@@ -62,7 +62,7 @@ jobs:
           quiet: true
           soft_fail: true
           github_pat: ${{ secrets.GITHUB_TOKEN }}
-          directory: infra/terraform
+          directory: terraform
 
       - name: Terraform Plan
         id: plan
@@ -188,7 +188,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./infra/terraform
+        working-directory: terraform
 
     outputs:
       resource_group_name: ${{ steps.terraform_outputs.outputs.resource_group_name }}
