@@ -76,7 +76,6 @@ jobs:
             -var="cosmos_administrator_password=${{ secrets.COSMOS_PASSWORD }}" \
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
             -var="key_vault_admin_object_id=${{ vars.KV_ADMIN_OBJECT_ID }}" \
-            -var="public_key_openssh=${{ secrets.PUBLIC_KEY_PERSONAL }}" \
             -out=main.tfplan 2>&1 | tee plan_output.txt
 
       - name: Upload Terrafrom Plan
@@ -84,7 +83,7 @@ jobs:
         id: upload
         with:
           name: streamforge-tfplan
-          path: infra/terraform/main.tfplan
+          path: terraform/main.tfplan
           retention-days: 1
 
       - name: Update PR with Plan
@@ -216,7 +215,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: streamforge-tfplan
-          path: ./infra/terraform
+          path: ./terraform
 
       - name: Terraform Apply
         id: apply
