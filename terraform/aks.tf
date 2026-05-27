@@ -27,7 +27,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     min_count            = var.aks_min_system_pool_node_count
     max_count            = var.aks_max_system_pool_node_count
     name                 = "systempool"
-    vm_size              = "Standard_D2as_v4"
+    vm_size              = "Standard_A2_v2"
     os_sku               = "Ubuntu"
     max_pods             = var.aks_systempool_max_pods_per_node
     vnet_subnet_id       = azurerm_subnet.aks_subnet.id
@@ -214,7 +214,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "node_pool_1" {
   name                  = "nodepool1"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
   vm_size               = "Standard_D2as_v4"
-  node_count            = 1
+  node_count            = 2
   os_sku                = "Ubuntu"
   vnet_subnet_id        = azurerm_subnet.aks_subnet.id
   os_disk_size_gb       = 128
