@@ -1,7 +1,7 @@
 application_name            = "streamforge"
 environment_name            = "dev"
-primary_location            = "eastus"
-primary_location_short_name = "eus"
+primary_location            = "centralindia"
+primary_location_short_name = "ci"
 vnet_app_addr_space         = "10.10.0.0/16"
 vnet_jump_addr_space        = "10.9.0.0/16"
 
