@@ -51,7 +51,7 @@ jobs:
           # Get the currently deployed chart version
           CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.aks_cluster_name }} \
-            --command "helm list -n argocd --filter \'argocd$\' -o json | jq -r '.[0].chart'")
+            --command "helm list -n argocd --filter \'argocd$\' -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
           echo "$CURRENT_VERSION"
           if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
             echo "::error title=helm list failed::${CURRENT_VERSION}"; 
@@ -89,7 +89,7 @@ jobs:
             --all \
             -n argocd \
             --for=condition=Available \
-            --timeout=600s"
+            --timeout=600s")
           echo "$DEPLOYMENT_OUT"
           if echo "$DEPLOYMENT_OUT" | grep -q "exitcode=[^0]"; then
               echo "::error title=ApplicationLoadBalancer deployment wait failed::${DEPLOYMENT_OUT}"; 

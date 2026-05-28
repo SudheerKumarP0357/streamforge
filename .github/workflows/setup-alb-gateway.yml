@@ -54,7 +54,7 @@ jobs:
           # Get the currently deployed chart version
           CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.aks_cluster_name }} \
-            --command "helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart'")
+            --command "helm list -n azure-alb-system --filter 'alb-controller' -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
           echo "$CURRENT_VERSION"
           if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
               echo "::error title=helm list failed::${CURRENT_VERSION}"
@@ -68,7 +68,7 @@ jobs:
               --name azure-alb-identity \
               --resource-group ${{ inputs.resource_group_name }} \
               --query clientId -o tsv)
-            echo "$ALB_CLIENT_ID"
+            echo "ALB CLINET ID: $ALB_CLIENT_ID"
             if echo "$ALB_CLIENT_ID" | grep -q "exitcode=[^0]"; then
                 echo "::error title=alb-controller client id not found::${ALB_CLIENT_ID}"
                 exit 1
@@ -174,16 +174,20 @@ jobs:
 
       - name: Wait for the ApplicationLoadBalancer Deployment
         run: |
-          ALB_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
-            --name ${{ inputs.aks_cluster_name }} \
+          ALB_OUT=$(az aks command invoke \
+            --resource-group "${{ inputs.resource_group_name }}" \
+            --name "${{ inputs.aks_cluster_name }}" \
             --command "kubectl wait applicationloadbalancer/alb-infra \
             -n azure-alb-system \
-            --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
-            --timeout=600s")
+            --for='jsonpath={.status.conditions[?(@.type==\"Deployment\")].reason}=Ready' \
+            --timeout=600s" \
+            --query logs -o tsv)
+
           echo "$ALB_OUT"
+
           if echo "$ALB_OUT" | grep -q "exitcode=[^0]"; then
-              echo "::error title=ApplicationLoadBalancer deployment wait failed::${ALB_OUT}"; 
-              exit 1
+            echo "::error title=ApplicationLoadBalancer deployment wait failed::${ALB_OUT}"
+            exit 1
           fi
 
       - name: Verify ApplicationLoadBalancer is running
