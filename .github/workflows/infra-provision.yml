@@ -229,7 +229,7 @@ jobs:
           echo "key_vault_name=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
           echo "redis_name=$(terraform output -raw redis_name)" >> $GITHUB_OUTPUT
           echo "postgres_server_name=$(terraform output -raw postgres_server_name)" >> $GITHUB_OUTPUT
-          echo "mongo_cluser_name=$(terraform output -raw mongo_cluser_name)" >> $GITHUB_OUTPUT
+          echo "mongo_cluster_name=$(terraform output -raw mongo_cluster_name)" >> $GITHUB_OUTPUT
           echo "aks_cluster_name=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
           echo "app_vnet_name=$(terraform output -raw app_vnet_name)" >> $GITHUB_OUTPUT
 
@@ -255,7 +255,7 @@ jobs:
           POSTGRES_DB: ${{ vars.POSTGRES_DATABASE }}
           COSMOS_USERNAME: ${{ vars.COSMOS_USERNAME }}
           COSMOS_PASSWORD: ${{ secrets.COSMOS_PASSWORD }}
-          COSMOS_CLUSTER_NAME: ${{ steps.terraform_outputs.outputs.mongo_cluser_name }}
+          COSMOS_CLUSTER_NAME: ${{ steps.terraform_outputs.outputs.mongo_cluster_name }}
           RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD }}
           RABBITMQ_DEFAULT_USER: ${{ vars.RABBITMQ_USER }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
