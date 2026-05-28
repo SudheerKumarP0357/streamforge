@@ -28,7 +28,6 @@ permissions:
 jobs:
   setup-alb-controller:
     name: Install ALB Controller
-    needs: [terraform-apply]
     runs-on: ubuntu-latest
     steps:
       - name: Login to Azure

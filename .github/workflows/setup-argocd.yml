@@ -22,7 +22,6 @@ permissions:
 jobs:
   setup-argocd:
     name: Setup ArgoCD
-    needs: [terraform-apply]
     runs-on: ubuntu-latest
     steps:
       - name: Login to Azure

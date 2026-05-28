@@ -180,8 +180,8 @@ jobs:
 
   terraform-apply:
     name: Terraform Apply
-    # needs: [manual-approval, terraform-plan]
-    needs: [terraform-plan]
+    needs: [manual-approval, terraform-plan]
+    # needs: [terraform-plan]
     if: success() && github.ref == 'refs/heads/main' && ( github.event_name == 'push' || github.event_name == 'workflow_dispatch' )
 
     runs-on: ubuntu-latest
