@@ -5,6 +5,6 @@ resources:
   - gateway.yml
   - argocd-httproute.yml
   - httproute.yml
-  - certificate.yml
+  # - certificate.yml
   - alb-argocd-health-check-policy.yml
-  - argocd-values.yaml
+  # - argocd-values.yaml

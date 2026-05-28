@@ -1,0 +1,82 @@
+name: Setup ArgoCD
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group_name:
+        required: true
+        type: string
+      aks_cluster_name:
+        required: true
+        type: string
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
+
+permissions:
+  id-token: write
+
+jobs:
+  setup-argocd:
+    name: Setup ArgoCD
+    needs: [terraform-apply]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Create argocd Namespace
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/argocd --timeout 60s"
+
+      - name: Install ArgoCD using Helm
+        run: |
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm list -n argocd --filter \'argocd$\' -o json | jq -r '.[0].chart'")
+
+          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.14" ]]; then
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+              --name ${{ inputs.aks_cluster_name }} \
+              --command "helm upgrade --install argocd \
+              oci://ghcr.io/argoproj/argo-helm/argo-cd \
+              --version 9.5.14 \
+              --namespace argocd \
+              --set global.domain=argocd.sudheer.fun \
+              --set server.insecure=true \
+              --set server.service.type=ClusterIP \
+              --set configs.params."server\.insecure"=true \
+              --set crds.enabled=true \
+              --wait \
+              --timeout 5m"
+          fi
+
+      - name: Wait for the ArgoCD resources Ready
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait deployment \
+            --all \
+            -n argocd \
+            --for=condition=Available \
+            --timeout=600s"
+
+      - name: Verify ArgoCD pods
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get pods -n argocd"

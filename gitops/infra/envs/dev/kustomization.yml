@@ -10,21 +10,21 @@ generatorOptions:
   disableNameSuffixHash: true
 
 patches:
-  # ── cert-manager: ClusterIssuer email ──────────────────────────────────────
-  - path: patches/issuer-patch.yml
-    target:
-      group: cert-manager.io
-      version: v1
-      kind: ClusterIssuer
-      name: cloudflare-cluster-issuer
+  # # ── cert-manager: ClusterIssuer email ──────────────────────────────────────
+  # - path: patches/issuer-patch.yml
+  #   target:
+  #     group: cert-manager.io
+  #     version: v1
+  #     kind: ClusterIssuer
+  #     name: cloudflare-cluster-issuer
 
-  # ── cert-manager: Certificate domains ─────────────────────────────────────
-  - path: patches/certificate-patch.yml
-    target:
-      group: cert-manager.io
-      version: v1
-      kind: Certificate
-      name: streamforge-tls-cert
+  # # ── cert-manager: Certificate domains ─────────────────────────────────────
+  # - path: patches/certificate-patch.yml
+  #   target:
+  #     group: cert-manager.io
+  #     version: v1
+  #     kind: Certificate
+  #     name: streamforge-tls-cert
 
   # ── gateway: Hostnames ─────────────────────────────────────────────────────
   - path: patches/gateway-patch.yml

@@ -1,0 +1,141 @@
+name: Setup ALB Gateway``
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group_name:
+        required: true
+        type: string
+      aks_cluster_name:
+        required: true
+        type: string
+      app_vnet_name:
+        required: true
+        type: string
+      subnet_name:
+        required: true
+        type: string
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
+
+permissions:
+  id-token: write
+
+jobs:
+  setup-alb-controller:
+    name: Install ALB Controller
+    needs: [terraform-apply]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Create azure-alb-system Namespace
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl create namespace azure-alb-system && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/azure-alb-system --timeout 60s"
+
+      - name: Install alb-controller using Helm
+        run: |
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm list -n azure-alb-system --filter "^alb-controller$" -o json | jq -r '.[0].chart'")
+
+          if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            ALB_CLIENT_ID=$(az identity show \
+              --name azure-alb-identity \
+              --resource-group ${{ inputs.resource_group_name }} \
+              --query clientId -o tsv)
+
+            az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm upgrade --install alb-controller \
+              oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+              --namespace azure-alb-system \
+              --version 1.9.13 \
+              --set albController.namespace=azure-alb-system \
+              --set albController.podIdentity.clientID=${ALB_CLIENT_ID} \
+              --wait \
+              --timeout 5m"
+          fi
+
+      - name: Wait for alb-controller Pods Ready
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait pod \
+            --selector app=alb-controller \
+            -n azure-alb-system \
+            --for=condition=Ready \
+            --timeout=600s"
+
+      - name: Verify alb-controller is running
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get pods -n azure-alb-system"
+
+      - name: Wait for GatewayClass to be accepted
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s"
+
+      - name: Verify GatewayClass azure-alb-external is installed
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get gatewayclass azure-alb-external -o yaml"
+
+      - name: Create ApplicationLoadBalancer Kubernetes Resource
+        run: |
+          ALB_SUBNET_ID=$(az network vnet subnet show \
+            --resource-group ${{ inputs.resource_group_name }} \
+            --vnet-name ${{ inputs.app_vnet_name }} \
+            --name ${{ inputs.subnet_name }} \
+            --query id -o tsv)
+
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "
+            kubectl apply -f - <<EOF
+            apiVersion: alb.networking.azure.io/v1
+            kind: ApplicationLoadBalancer
+            metadata:
+              name: alb-infra
+              namespace: azure-alb-system
+            spec:
+              associations:
+                - ${ALB_SUBNET_ID}
+            EOF
+            "
+
+      - name: Wait for the ApplicationLoadBalancer Deployment
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait applicationloadbalancer/alb-infra \
+            -n azure-alb-system \
+            --for='jsonpath={.status.conditions[?(@.type=="Deployment")].reason}=Ready' \
+            --timeout=600s"
+
+      - name: Verify ApplicationLoadBalancer is running
+        run: |
+          az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get applicationloadbalancer alb-infra \
+            -n azure-alb-system -o yaml"
