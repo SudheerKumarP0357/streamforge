@@ -52,7 +52,7 @@ jobs:
           CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.aks_cluster_name }} \
             --command "helm list -n argocd --filter argocd -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
-          echo "$CURRENT_VERSION"
+          echo "ArgoCD Current version: $CURRENT_VERSION"
           if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
             echo "::error title=helm list failed::${CURRENT_VERSION}"; 
           fi
