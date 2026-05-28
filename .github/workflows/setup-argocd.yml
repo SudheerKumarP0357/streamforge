@@ -119,3 +119,26 @@ jobs:
               echo "::error title=ArgoCD project creation failed::${ARGO_PROJECT_OUT}"; 
               exit 1
           fi
+      - name: Create TLS Secret in Argocd Namespace
+        run: |
+          TLS_CRT=$(printf '%s' "${{ secrets.CLOUDFLARE_CERT }}" | base64 | tr -d '\n')
+          TLS_KEY=$(printf '%s' "${{ secrets.CLOUDFLARE_CERT_KEY }}" | base64 | tr -d '\n')
+          TLS_SECRET_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "
+              kubectl apply -f - <<EOF
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: argocd-tls-secret
+                namespace: argocd
+              type: kubernetes.io/tls
+              data:
+                tls.crt: ${TLS_CRT}
+                tls.key: ${TLS_KEY}
+              EOF")
+          echo "$TLS_SECRET_OUT"
+          if echo "$TLS_SECRET_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=TLS Secret creation failed::${TLS_SECRET_OUT}"; 
+              exit 1
+          fi
