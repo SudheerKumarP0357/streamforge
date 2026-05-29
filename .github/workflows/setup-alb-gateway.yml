@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.ARM_CLIENT_ID }}
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
@@ -69,7 +69,7 @@ jobs:
               --name azure-alb-identity \
               --resource-group ${{ inputs.resource_group_name }} \
               --query clientId -o tsv)
-              
+
             echo "ALB CLINET ID: $ALB_CLIENT_ID"
             if echo "$ALB_CLIENT_ID" | grep -q "exitcode=[^0]"; then
                 echo "::error title=alb-controller client id not found::${ALB_CLIENT_ID}"
