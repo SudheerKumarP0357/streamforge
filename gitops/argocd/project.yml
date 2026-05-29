@@ -54,3 +54,5 @@ spec:
       kind: ApplicationSet
     - group: argoproj.io
       kind: AppProject
+    - group: policy
+      kind: PodDisruptionBudget
