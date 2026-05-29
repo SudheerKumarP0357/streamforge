@@ -92,7 +92,7 @@ jobs:
             --timeout=600s")
           echo "$DEPLOYMENT_OUT"
           if echo "$DEPLOYMENT_OUT" | grep -q "exitcode=[^0]"; then
-              echo "::error title=ApplicationLoadBalancer deployment wait failed::${DEPLOYMENT_OUT}"; 
+              echo "::error title=ArgoCD deployment wait failed::${DEPLOYMENT_OUT}"; 
               exit 1
           fi
 
@@ -103,7 +103,7 @@ jobs:
             --command "kubectl get pods -n argocd")
           echo "$PODS_OUT"
           if echo "$PODS_OUT" | grep -q "exitcode=[^0]"; then
-              echo "::error title=ApplicationLoadBalancer verification failed::${PODS_OUT}"; 
+              echo "::error title=ArgoCD pods verification failed::${PODS_OUT}"; 
               exit 1
           fi
 
@@ -121,23 +121,15 @@ jobs:
           fi
       - name: Create TLS Secret in Argocd Namespace
         run: |
-          TLS_CRT=$(printf '%s' "${{ secrets.CLOUDFLARE_CERT }}" | base64 | tr -d '\n')
-          TLS_KEY=$(printf '%s' "${{ secrets.CLOUDFLARE_CERT_KEY }}" | base64 | tr -d '\n')
+          echo "Exporting Cloudflare certificate and key"
+          echo "${{ secrets.CLOUDFLARE_CERT }}" > /tmp/cert.pem
+          echo "${{ secrets.CLOUDFLARE_CERT_KEY }}" > /tmp/key.pem
+
           TLS_SECRET_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.aks_cluster_name }} \
-            --command "
-            kubectl apply -f - <<EOF
-            apiVersion: v1
-            kind: Secret
-            metadata:
-              name: argocd-tls-secret
-              namespace: argocd
-            type: kubernetes.io/tls
-            data:
-              tls.crt: ${TLS_CRT}
-              tls.key: ${TLS_KEY}
-            EOF
-            ")
+            --command "kubectl create secret tls argocd-tls-secret -n argocd --cert=/tmp/cert.pem --key=/tmp/key.pem" \
+            --file /tmp/cert.pem \
+            --file /tmp/key.pem)
           echo "$TLS_SECRET_OUT"
           if echo "$TLS_SECRET_OUT" | grep -q "exitcode=[^0]"; then
               echo "::error title=TLS Secret creation failed::${TLS_SECRET_OUT}"; 
