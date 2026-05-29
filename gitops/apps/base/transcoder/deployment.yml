@@ -42,8 +42,8 @@ spec:
           env:
             - name: POSTGRES_HOST
               valueFrom:
-                configMapKeyRef:
-                  name: sf-configmaps
+                secretKeyRef:
+                  name: sf-secrets
                   key: POSTGRES_HOST
             - name: POSTGRES_PORT
               valueFrom:
@@ -66,8 +66,8 @@ spec:
           env:
             - name: REDIS_HOST
               valueFrom:
-                configMapKeyRef:
-                  name: sf-configmaps
+                secretKeyRef:
+                  name: sf-secrets
                   key: REDIS_HOST
             - name: REDIS_PORT
               valueFrom:
@@ -80,7 +80,7 @@ spec:
             - |
               until nc -z ${REDIS_HOST} ${REDIS_PORT}; do
                 echo "Waiting for Redis..."
-                sleep 5
+                sleep 3
               done
               echo "Redis is ready"
 
@@ -104,7 +104,7 @@ spec:
             - |
               until nc -z ${RABBITMQ_HOST} ${RABBITMQ_PORT}; do
                 echo "Waiting for RabbitMq..."
-                sleep 5
+                sleep 3
               done
               echo "RabbitMq is ready"
 
