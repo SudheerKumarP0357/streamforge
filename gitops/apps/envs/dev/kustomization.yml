@@ -11,8 +11,6 @@ replicas:
     name: sf-api
   - count: 2
     name: sf-frontend
-  - count: 1
-    name: sf-transcoder
 
 images:
   - name: ghcr.io/sudheerkumarp0357/streamforge/api
