@@ -6,12 +6,12 @@ metadata:
   name: sf-api-svc
   labels:
     app.kubernetes.io/name: api
-    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: backend
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   selector:
     app.kubernetes.io/name: api
-    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: backend
   ports:
     - port: 8080

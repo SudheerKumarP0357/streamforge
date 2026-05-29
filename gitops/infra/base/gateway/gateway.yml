@@ -6,6 +6,7 @@ metadata:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
   annotations:
+    argocd.argoproj.io/sync-wave: "-1"
     alb.networking.azure.io/alb-namespace: azure-alb-system
     alb.networking.azure.io/alb-name: alb-infra
 spec:

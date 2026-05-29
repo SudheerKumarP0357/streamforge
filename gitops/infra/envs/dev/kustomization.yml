@@ -40,4 +40,4 @@ patches:
       group: gateway.networking.k8s.io
       version: v1
       kind: HTTPRoute
-      name: httproute-redirect-http-to-https
+      name: http-redirect

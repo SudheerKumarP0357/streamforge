@@ -2,6 +2,11 @@ apiVersion: alb.networking.azure.io/v1
 kind: HealthCheckPolicy
 metadata:
   name: frontend-health-check
+  labels:
+    app.kubernetes.io/part-of: streamforge-infra
+    app.kubernetes.io/component: gateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   targetRef:
     group: ""

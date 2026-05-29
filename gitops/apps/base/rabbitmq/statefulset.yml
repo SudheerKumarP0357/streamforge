@@ -6,16 +6,16 @@ metadata:
   name: sf-rabbitmq
   labels:
     app.kubernetes.io/name: rabbitmq
-    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: queue
     azure.workload.identity/use: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   serviceName: sf-rabbitmq-svc
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: rabbitmq
-      app.kubernetes.io/part-of: streamforge-application
       app.kubernetes.io/component: queue
   volumeClaimTemplates:
     - metadata:
@@ -31,7 +31,6 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: rabbitmq
-        app.kubernetes.io/part-of: streamforge-application
         app.kubernetes.io/component: queue
         azure.workload.identity/use: "true"
     spec:

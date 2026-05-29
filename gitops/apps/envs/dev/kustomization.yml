@@ -43,3 +43,5 @@ patches:
       kind: SecretProviderClass
       name: azure-kv-sf
       version: v1
+commonAnnotations:
+  app.kubernetes.io/part-of: streamforge-apps

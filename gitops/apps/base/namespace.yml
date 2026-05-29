@@ -5,5 +5,6 @@ kind: Namespace
 metadata:
   name: streamforge
   labels:
-    app.kubernetes.io/name: streamforge
-    app.kubernetes.io/part-of: streamforge-application
+    app.kubernetes.io/component: namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"

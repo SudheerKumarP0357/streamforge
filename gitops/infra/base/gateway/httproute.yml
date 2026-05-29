@@ -2,7 +2,9 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: httproute-redirect-http-to-https
+  name: http-redirect
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
   labels:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
@@ -11,7 +13,6 @@ spec:
     - name: streamforge-gateway
       sectionName: http-listener
   hostnames:
-    - "sudheer.fun"
     - "*.sudheer.fun"
   rules:
     - filters:

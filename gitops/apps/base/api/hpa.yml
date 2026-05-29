@@ -2,6 +2,10 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: hpa-api
+  labels:
+    app.kubernetes.io/component: hpa
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

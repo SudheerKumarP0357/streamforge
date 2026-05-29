@@ -163,12 +163,12 @@ resource "azurerm_federated_identity_credential" "sf_workload_identity_fic" {
   subject                   = "system:serviceaccount:streamforge-${var.environment_name}:sf-workload-sa"
 }
 
-# resource "azurerm_role_assignment" "main" {
-#   principal_id         = azurerm_user_assigned_identity.sf_workload_identity.principal_id
-#   role_definition_name = "Key Vault Secrets User"
-#   principal_type       = "ServicePrincipal"
-#   scope                = azurerm_key_vault.main.id
-# }
+resource "azurerm_role_assignment" "main" {
+  principal_id         = azurerm_user_assigned_identity.sf_workload_identity.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  principal_type       = "ServicePrincipal"
+  scope                = azurerm_key_vault.main.id
+}
 
 
 # Needed for Azure Load Balancer - Azure ALB Controller
@@ -210,34 +210,34 @@ resource "azurerm_federated_identity_credential" "alb_fic" {
   user_assigned_identity_id = azurerm_user_assigned_identity.alb_uami.id
 }
 
-# resource "azurerm_kubernetes_cluster_node_pool" "user_node_pool_1" {
-#   name                  = "nodepool1"
-#   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-#   vm_size               = "Standard_D2as_v4"
-#   node_count            = 1
-#   os_sku                = "Ubuntu"
-#   vnet_subnet_id        = azurerm_subnet.aks_subnet.id
-#   os_disk_size_gb       = 128
+resource "azurerm_kubernetes_cluster_node_pool" "user_node_pool_1" {
+  name                  = "nodepool1"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
+  vm_size               = "Standard_D2as_v4"
+  node_count            = 1
+  os_sku                = "Ubuntu"
+  vnet_subnet_id        = azurerm_subnet.aks_subnet.id
+  os_disk_size_gb       = 128
 
-#   lifecycle {
-#     ignore_changes = [
-#       upgrade_settings
-#     ]
-#   }
-# }
+  lifecycle {
+    ignore_changes = [
+      upgrade_settings
+    ]
+  }
+}
 
-# resource "azurerm_kubernetes_cluster_node_pool" "user_node_pool_2" {
-#   name                  = "nodepool2"
-#   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-#   vm_size               = "Standard_A2_v2"
-#   node_count            = 1
-#   os_sku                = "Ubuntu"
-#   vnet_subnet_id        = azurerm_subnet.aks_subnet.id
-#   os_disk_size_gb       = 128
+resource "azurerm_kubernetes_cluster_node_pool" "user_node_pool_2" {
+  name                  = "nodepool2"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
+  vm_size               = "Standard_A2_v2"
+  node_count            = 1
+  os_sku                = "Ubuntu"
+  vnet_subnet_id        = azurerm_subnet.aks_subnet.id
+  os_disk_size_gb       = 128
 
-#   lifecycle {
-#     ignore_changes = [
-#       upgrade_settings
-#     ]
-#   }
-# }
+  lifecycle {
+    ignore_changes = [
+      upgrade_settings
+    ]
+  }
+}

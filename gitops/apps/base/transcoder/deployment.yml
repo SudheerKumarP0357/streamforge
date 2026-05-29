@@ -6,21 +6,20 @@ metadata:
   name: sf-transcoder
   labels:
     app.kubernetes.io/name: transcoder
-    app.kubernetes.io/part-of: streamforge-application
     app.kubernetes.io/component: backend
     azure.workload.identity/use: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: transcoder
-      app.kubernetes.io/part-of: streamforge-application
       app.kubernetes.io/component: backend
   template:
     metadata:
       labels:
         app.kubernetes.io/name: transcoder
-        app.kubernetes.io/part-of: streamforge-application
         app.kubernetes.io/component: backend
     spec:
       serviceAccountName: "sf-workload-sa"

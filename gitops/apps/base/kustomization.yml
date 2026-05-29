@@ -4,6 +4,7 @@ kind: Kustomization
 
 resources:
   - namespace.yml
+  - pdb.yml
   - ./configmaps/
   - ./secrets/
   - ./rabbitmq/
