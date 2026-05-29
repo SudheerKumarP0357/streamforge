@@ -55,7 +55,8 @@ jobs:
           CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.aks_cluster_name }} \
             --command "helm list -n azure-alb-system --filter 'alb-controller' -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
-          echo "$CURRENT_VERSION"
+          echo "ALB Current version: $CURRENT_VERSION"
+
           if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
               echo "::error title=helm list failed::${CURRENT_VERSION}"
           fi
@@ -68,6 +69,7 @@ jobs:
               --name azure-alb-identity \
               --resource-group ${{ inputs.resource_group_name }} \
               --query clientId -o tsv)
+              
             echo "ALB CLINET ID: $ALB_CLIENT_ID"
             if echo "$ALB_CLIENT_ID" | grep -q "exitcode=[^0]"; then
                 echo "::error title=alb-controller client id not found::${ALB_CLIENT_ID}"
