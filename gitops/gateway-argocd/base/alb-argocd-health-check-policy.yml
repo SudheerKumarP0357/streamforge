@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: streamforge-infra
     app.kubernetes.io/component: gateway
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   targetRef:
     group: ""
@@ -15,8 +15,8 @@ spec:
     name: argocd-server
     namespace: argocd
   default:
-    interval: 10s
-    timeout: 5s
+    interval: 30s
+    timeout: 20s
     healthyThreshold: 2
     unhealthyThreshold: 3
     port: 8080
