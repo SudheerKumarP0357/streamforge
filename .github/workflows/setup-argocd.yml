@@ -135,3 +135,16 @@ jobs:
               echo "::error title=TLS Secret creation failed::${TLS_SECRET_OUT}"; 
               exit 1
           fi
+
+      - name: Create Gateway for ArgoCD
+        working-directory: gitops/argocd
+        run: |
+          ARGO_GATEWAY_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl apply -f gateway-argocd-dev.yml" \
+            --file gateway-argocd-dev.yml)
+          echo "$ARGO_GATEWAY_OUT"
+          if echo "$ARGO_GATEWAY_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD Gateway creation failed::${ARGO_GATEWAY_OUT}"; 
+              exit 1
+          fi
