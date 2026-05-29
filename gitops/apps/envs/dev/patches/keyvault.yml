@@ -1,11 +1,11 @@
 - op: replace
   path: /spec/parameters/clientID
-  value: PLACEHOLDER_CLIENT_ID
+  value: c1a7d234-fc89-4183-8291-62dab4535723
 
 - op: replace
   path: /spec/parameters/tenantID
-  value: PLACEHOLDER_TENANT_ID
+  value: 92768f97-e40a-49b6-8fd5-a20497464fdc
 
 - op: replace
   path: /spec/parameters/keyvaultName
-  value: PLACEHOLDER_AZURE_KEY_VAULT_NAME
+  value: kv-streamforgedevci
