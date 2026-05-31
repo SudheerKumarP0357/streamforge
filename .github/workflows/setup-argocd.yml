@@ -70,7 +70,7 @@ jobs:
               --set global.domain=argocd.sudheer.fun \
               --set server.insecure=true \
               --set server.service.type=ClusterIP \
-              --set configs.params."server\.insecure"=true \
+              --set configs.params.'server\.insecure'=true \
               --set crds.enabled=true \
               --wait \
               --timeout 5m")
