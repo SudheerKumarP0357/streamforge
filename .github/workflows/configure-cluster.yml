@@ -218,3 +218,144 @@ jobs:
               echo "::error title=ApplicationLoadBalancer verification failed::${ALB_OUT}"; 
               exit 1
           fi
+
+  setup-argocd:
+    name: Setup ArgoCD
+    needs: [setup-alb-controller]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Create argocd Namespace
+        run: |
+          NAMESPACE_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/argocd --timeout 60s")
+          echo "$NAMESPACE_OUT"
+          if echo "$NAMESPACE_OUT" | grep -q "exitcode=[^0]"; then
+            echo "::error title=Namespace creation failed::${NAMESPACE_OUT}"; 
+            exit 1
+          fi
+
+      - name: Install ArgoCD using Helm
+        run: |
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm list -n argocd --filter argocd -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
+          echo "ArgoCD Current version: $CURRENT_VERSION"
+          if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
+            echo "::error title=helm list failed::${CURRENT_VERSION}"; 
+          fi
+
+          if [[ "$CURRENT_VERSION" == "argo-cd-9.5.14" ]]; then
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            HELM_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+              --name ${{ inputs.aks_cluster_name }} \
+              --command "helm upgrade --install argocd \
+              oci://ghcr.io/argoproj/argo-helm/argo-cd \
+              --version 9.5.14 \
+              --namespace argocd \
+              --set global.domain=argocd.sudheer.fun \
+              --set server.insecure=true \
+              --set server.service.type=ClusterIP \
+              --set configs.params."server\.insecure"=true \
+              --set crds.enabled=true \
+              --wait \
+              --timeout 5m")
+            echo "$HELM_OUT"
+            if echo "$HELM_OUT" | grep -q "exitcode=[^0]"; then
+                echo "::error title=helm install failed::${HELM_OUT}"; 
+                exit 1
+            fi
+          fi
+
+      - name: Wait for the ArgoCD resources Ready
+        run: |
+          DEPLOYMENT_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait deployment \
+            --all \
+            -n argocd \
+            --for=condition=Available \
+            --timeout=600s")
+          echo "$DEPLOYMENT_OUT"
+          if echo "$DEPLOYMENT_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD deployment wait failed::${DEPLOYMENT_OUT}"; 
+              exit 1
+          fi
+
+      - name: Verify ArgoCD pods
+        run: |
+          PODS_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get pods -n argocd")
+          echo "$PODS_OUT"
+          if echo "$PODS_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD pods verification failed::${PODS_OUT}"; 
+              exit 1
+          fi
+
+      - name: Create ArgoCD Project for Streamforge
+        working-directory: gitops/argocd
+        run: |
+          ARGO_PROJECT_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl apply -f project.yml" \
+            --file project.yml)
+          echo "$ARGO_PROJECT_OUT"
+          if echo "$ARGO_PROJECT_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD project creation failed::${ARGO_PROJECT_OUT}"; 
+              exit 1
+          fi
+      - name: Create TLS Secret in Argocd Namespace
+        run: |
+          echo "Exporting Cloudflare certificate and key"
+          echo "${{ secrets.CLOUDFLARE_CERT }}" > $RUNNER_TEMP/cert.pem
+          echo "${{ secrets.CLOUDFLARE_CERT_KEY }}" > $RUNNER_TEMP/key.pem
+
+          TLS_SECRET_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl create secret tls argocd-tls-secret -n argocd --cert=cert.pem --key=key.pem --dry-run=client -o yaml | kubectl apply -f - " \
+            --file $RUNNER_TEMP/cert.pem \
+            --file $RUNNER_TEMP/key.pem)
+          echo "$TLS_SECRET_OUT"
+          if echo "$TLS_SECRET_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=TLS Secret creation failed::${TLS_SECRET_OUT}"; 
+              exit 1
+          fi
+
+      - name: Create Gateway for ArgoCD
+        working-directory: gitops/argocd
+        run: |
+          ARGO_GATEWAY_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl apply -f gateway-argocd-dev.yml" \
+            --file gateway-argocd-dev.yml)
+          echo "$ARGO_GATEWAY_OUT"
+          if echo "$ARGO_GATEWAY_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD Gateway creation failed::${ARGO_GATEWAY_OUT}"; 
+              exit 1
+          fi
+
+          sleep 60s # wait for gateway to configure using argocd
+
+          ARGO_GATEWAY_FRONTEND_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get gateway -n argocd -o yaml")
+          echo "$ARGO_GATEWAY_FRONTEND_OUT"
+          if echo "$ARGO_GATEWAY_FRONTEND_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ArgoCD Gateway Frontend verification failed::${ARGO_GATEWAY_FRONTEND_OUT}"; 
+              exit 1
+          fi
