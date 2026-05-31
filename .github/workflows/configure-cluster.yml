@@ -1,0 +1,220 @@
+name: Configure AKS Cluster
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group_name:
+        required: true
+        type: string
+      aks_cluster_name:
+        required: true
+        type: string
+      app_vnet_name:
+        required: true
+        type: string
+      subnet_name:
+        required: true
+        type: string
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_USE_AZUREAD: true
+  ARM_USE_OIDC: true
+
+permissions:
+  id-token: write
+
+jobs:
+  setup-alb-controller:
+    name: Install ALB Controller
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Create azure-alb-system Namespace
+        run: |
+          NAMESPACE_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl create namespace azure-alb-system --dry-run=client -o yaml | kubectl apply -f - && \
+            kubectl wait --for='jsonpath={.status.phase}=Active' ns/azure-alb-system --timeout 60s")
+          echo "$NAMESPACE_OUT"
+          if echo "$NAMESPACE_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=Namespace creation failed::${NAMESPACE_OUT}"
+              exit 1
+          fi
+
+      - name: Install alb-controller using Helm
+        run: |
+          # Get the currently deployed chart version
+          CURRENT_VERSION=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm list -n azure-alb-system --filter 'alb-controller' -o json | jq -r '.[0].chart'" --query logs -o tsv | tr -d '\r')
+          echo "ALB Current version: $CURRENT_VERSION"
+
+          if echo "$CURRENT_VERSION" | grep -q "exitcode=[^0]"; then
+              echo "::error title=helm list failed::${CURRENT_VERSION}"
+          fi
+
+          if [[ "$CURRENT_VERSION" == "alb-controller-1.9.13" ]]; then
+            echo "Versions match. Skipping upgrade to prevent revision bloat."
+          else
+            echo "New version detected. Proceeding with upgrade..."
+            ALB_CLIENT_ID=$(az identity show \
+              --name azure-alb-identity \
+              --resource-group ${{ inputs.resource_group_name }} \
+              --query clientId -o tsv)
+
+            echo "ALB CLINET ID: $ALB_CLIENT_ID"
+            if echo "$ALB_CLIENT_ID" | grep -q "exitcode=[^0]"; then
+                echo "::error title=alb-controller client id not found::${ALB_CLIENT_ID}"
+                exit 1
+            fi
+
+            HELM_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "helm upgrade --install alb-controller \
+              oci://mcr.microsoft.com/application-lb/charts/alb-controller \
+              --namespace azure-alb-system \
+              --version 1.9.13 \
+              --set albController.namespace=azure-alb-system \
+              --set albController.podIdentity.clientID=${ALB_CLIENT_ID} \
+              --wait \
+              --timeout 5m")
+            echo "$HELM_OUT"
+            if echo "$HELM_OUT" | grep -q "exitcode=[^0]"; then
+                echo "::error title=helm install failed::${HELM_OUT}"
+                exit 1
+            fi
+          fi
+
+      - name: Wait for alb-controller Pods Ready
+        run: |
+          POD_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait pod \
+            --selector app=alb-controller \
+            -n azure-alb-system \
+            --for=condition=Ready \
+            --timeout=600s")
+            echo "$POD_OUT"
+            if echo "$POD_OUT" | grep -q "exitcode=[^0]"; then
+                echo "::error title=pod wait failed::${POD_OUT}"
+                exit 1
+            fi
+
+      - name: Verify alb-controller is running
+        run: |
+          SEC_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get pods -n azure-alb-system")
+          echo "$SEC_OUT"
+          if echo "$SEC_OUT" | grep -q "exitcode=[^0]"; then
+            echo "::error title=alb-controller is not running::${SEC_OUT}"; 
+            exit 1
+          fi
+
+      - name: Wait for GatewayClass to be accepted
+        run: |
+          GATEWAY_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl wait gatewayclass azure-alb-external --for=condition=Accepted --timeout=600s")
+          echo "$GATEWAY_OUT"
+          if echo "$GATEWAY_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=GatewayClass wait failed::${GATEWAY_OUT}"; 
+              exit 1
+          fi
+
+      - name: Verify GatewayClass azure-alb-external is installed
+        run: |
+          GATEWAY_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get gatewayclass azure-alb-external -o yaml")
+          echo "$GATEWAY_OUT"
+          if echo "$GATEWAY_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=GatewayClass not installed::${GATEWAY_OUT}"; 
+              exit 1
+          fi
+
+      - name: Create ApplicationLoadBalancer Kubernetes Resource
+        run: |
+          ALB_SUBNET_ID=$(az network vnet subnet show \
+            --resource-group ${{ inputs.resource_group_name }} \
+            --vnet-name ${{ inputs.app_vnet_name }} \
+            --name ${{ inputs.subnet_name }} \
+            --query id -o tsv)
+          echo "$ALB_SUBNET_ID"
+          if echo "$ALB_SUBNET_ID" | grep -q "exitcode=[^0]"; then
+              echo "::error title=Subnet not found::${ALB_SUBNET_ID}"; 
+              exit 1
+          fi
+          ALB_OUT=$(az aks command invoke \
+          --resource-group "${{ inputs.resource_group_name }}" \
+          --name "${{ inputs.aks_cluster_name }}" \
+          --command "
+          kubectl apply -f - <<EOF
+          apiVersion: alb.networking.azure.io/v1
+          kind: ApplicationLoadBalancer
+          metadata:
+            name: alb-infra
+            namespace: azure-alb-system
+          spec:
+            associations:
+              - ${ALB_SUBNET_ID}
+          EOF
+          ")
+          echo "$ALB_OUT"
+          if echo "$ALB_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ApplicationLoadBalancer creation failed::${ALB_OUT}"; 
+              exit 1
+          fi
+
+      - name: Wait for ApplicationLoadBalancer to be Ready
+        run: |
+          MAX_ATTEMPTS=20
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS — checking ALB deployment status..."
+
+            RESULT=$(az aks command invoke \
+              --resource-group "${{ inputs.resource_group_name }}" \
+              --name "${{ inputs.aks_cluster_name }}" \
+              --command "kubectl get applicationloadbalancer alb-infra -n azure-alb-system -o jsonpath='{.status.conditions[?(@.type==\"Deployment\")].reason}' 2>/dev/null || echo 'notfound'" \
+              --output json 2>/dev/null)
+
+            EXIT_CODE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('exitCode',1))" 2>/dev/null || echo "1")
+            STATUS=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('logs','notfound').strip())" 2>/dev/null || echo "notfound")
+
+            echo "Deployment reason: '$STATUS' (exitCode: $EXIT_CODE)"
+
+            if [ "$EXIT_CODE" = "0" ] && [ "$STATUS" = "Ready" ]; then
+              echo "ApplicationLoadBalancer is Ready"
+              exit 0
+            fi
+
+            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "::error title=ALB not ready::Timed out after $((MAX_ATTEMPTS * 30))s. Last status: '$STATUS'"
+              exit 1
+            fi
+
+            echo "Status not Ready yet, retrying in 30s..."
+            sleep 30
+          done
+
+      - name: Verify ApplicationLoadBalancer is running
+        run: |
+          ALB_OUT=$(az aks command invoke --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --command "kubectl get applicationloadbalancer alb-infra \
+            -n azure-alb-system -o yaml")
+          echo "$ALB_OUT"
+          if echo "$ALB_OUT" | grep -q "exitcode=[^0]"; then
+              echo "::error title=ApplicationLoadBalancer verification failed::${ALB_OUT}"; 
+              exit 1
+          fi
